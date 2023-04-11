@@ -1,0 +1,202 @@
+name: Create Release
+
+on:
+  workflow_call:
+    inputs:
+      github-run-id:
+        description: ''
+        default: ''
+        required: false
+        type: string
+      github-workflow:
+        description: ''
+        default: ''
+        required: false
+        type: string
+      github-workflow-ref:
+        description: ''
+        default: ''
+        required: false
+        type: string
+      github-workflow-sha:
+        description: ''
+        default: ''
+        required: false
+        type: string
+      github-workspace:
+        description: ''
+        default: ''
+        required: false
+        type: string
+      github-repository:
+        description: ''
+        default: ''
+        required: false
+        type: string
+      github-repository-owner:
+        description: ''
+        default: ''
+        required: false
+        type: string
+      github-repository-name:
+        description: ''
+        default: ''
+        required: false
+        type: string
+      github-repository-url:
+        description: ''
+        default: ''
+        required: false
+        type: string
+      github-action-ref:
+        description: ''
+        default: ''
+        required: false
+        type: string
+      github-event-name:
+        description: ''
+        default: ''
+        required: false
+        type: string
+      github-actor:
+        description: ''
+        default: ''
+        required: false
+        type: string
+      github-triggering-actor:
+        description: ''
+        default: ''
+        required: false
+        type: string
+      github-base-ref:
+        description: ''
+        default: ''
+        required: false
+        type: string
+      github-ref-name:
+        description: ''
+        default: ''
+        required: false
+        type: string
+      github-ref-type:
+        description: ''
+        default: ''
+        required: false
+        type: string
+      github-ref:
+        description: ''
+        default: ''
+        required: false
+        type: string
+      github-sha:
+        description: ''
+        default: ''
+        required: false
+        type: string
+
+      build-artifact-name:                # name of build artifact to transfer between jobs/workflows
+        required: true
+        type: string
+      release-artifact-tarball-filename:  # filename of release artifact to be uploaded with release
+        required: true
+        type: string
+      release-tag-name-type:              # semvar | iso
+        required: true
+        type: string
+
+env:
+  RELEASE_TAG_NAME: ''
+
+jobs:
+  create-release-semvar:
+    if: inputs.release-tag-name-type == 'semvar'
+    runs-on: ubuntu-latest
+    steps:
+    
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          repository: "${{ inputs.github-repository }}"
+          fetch-depth: 0 # required for github-action-get-previous-tag
+
+      - uses: actions/download-artifact@master
+        with:
+          name: "${{ inputs.build-artifact-name }}"
+          path: .
+      - run: ls -l
+
+      - id: previoustag
+        name: Get previous tag
+        uses: 'WyriHaximus/github-action-get-previous-tag@v1'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          fallback: 0.0.9
+          prefix: v
+
+      - id: semver
+        name: Get next minor version
+        uses: 'WyriHaximus/github-action-next-semvers@v1'
+        with:
+          version: ${{ steps.previoustag.outputs.tag }}
+
+      - name: Set RELEASE_TAG_NAME env
+        run: echo "RELEASE_TAG_NAME=${{ steps.semver.outputs.v_patch }}" >> $GITHUB_ENV
+      - name: Set RELEASE_TAG_NAME env
+        run: echo "RELEASE_TAG_NAME=${{ steps.semver.outputs.v_minor }}" >> $GITHUB_ENV
+
+      - name: Generate RELEASE.md
+        run: |
+          echo "# Release ${{ env.RELEASE_TAG_NAME }}" > RELEASE.md
+          echo '`github` context:' >> RELEASE.md
+          echo '```' >> RELEASE.md
+          echo "run_id: ${{ inputs.github-run-id }}" >> RELEASE.md
+          echo "workflow: ${{ inputs.github-workflow }}" >> RELEASE.md
+          echo "workflow_ref: ${{ inputs.github-workflow-ref }}" >> RELEASE.md
+          echo "workflow_sha: ${{ inputs.github-workflow-sha }}" >> RELEASE.md
+          echo "workspace: ${{ inputs.github-workspace }}" >> RELEASE.md
+          echo "repository: ${{ inputs.github-repository }}" >> RELEASE.md
+          echo "repository_owner: ${{ inputs.github-repository-owner }}" >> RELEASE.md
+          echo "repository_name: ${{ inputs.github-repository-name }}" >> RELEASE.md
+          echo "repositoryUrl: ${{ inputs.github-repositoryUrl }}" >> RELEASE.md
+          echo "action_ref: ${{ inputs.github-action-ref }}" >> RELEASE.md
+          echo "event_name: ${{ inputs.github-event-name }}" >> RELEASE.md
+          echo "actor: ${{ inputs.github-actor }}" >> RELEASE.md
+          echo "triggering_actor: ${{ inputs.github-triggering-actor }}" >> RELEASE.md
+          echo "base_ref: ${{ inputs.github-base-ref }}" >> RELEASE.md
+          echo "ref_name: ${{ inputs.github-ref-name }}" >> RELEASE.md
+          echo "ref_type: ${{ inputs.github-ref-type }}" >> RELEASE.md
+          echo "ref: ${{ inputs.github-ref }}" >> RELEASE.md
+          echo "sha: ${{ inputs.github-sha }}" >> RELEASE.md
+          echo '```' >> RELEASE.md
+
+      - id: create_release
+        name: Create semvar release
+        uses: actions/create-release@v1.1.4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          owner: "${{ inputs.github-repository-owner }}"
+          repo: "${{ inputs.github-repository-name }}"
+          tag_name: ${{ env.RELEASE_TAG_NAME }}
+          release_name: ${{ env.RELEASE_TAG_NAME }}
+          body_path: "./RELEASE.md" 
+    
+      - id: upload-release-asset
+        name: Upload Release Tarball Asset
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: "./${{ inputs.release-artifact-tarball-filename }}"
+          asset_name: "${{ inputs.release-artifact-tarball-filename }}"
+          asset_content_type: application/tar+gzip 
+  
+  
+  
+  
+  
+    
+    
+    
