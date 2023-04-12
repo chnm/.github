@@ -1,12 +1,8 @@
-## Hi there 👋
+## Hello, world 👋
 
-<!--
 
-**Here are some ideas to get you started:**
+Welcome to the Roy Rosenzweig Center for History and New Media's organization on GitHub.
 
-🙋‍♀️ A short introduction - what is your organization all about?
-🌈 Contribution guidelines - how can the community get involved?
-👩‍💻 Useful resources - where can the community find your docs? Is there anything else the community should know?
-🍿 Fun facts - what does your team eat for breakfast?
-🧙 Remember, you can do mighty things with the power of [Markdown](https://docs.github.com/github/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax)
--->
+* 🏫 Nearly 30 years in open source digital history. [Read our story](https://rrchnm.org/our-story/)
+* :books: A leader in web-based digital historical scholarship, public history, and education projects. [Explore our work](https://rrchnm.org/our-work/)
+* 🌐 Creator of tools like [Zotero](https://www.zotero.org/), [Omeka](https://omeka.org/), and [Tropy](https://tropy.org/).
