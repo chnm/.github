@@ -120,7 +120,10 @@ jobs:
       - id: build_timestamp_for_tag
         name: Get build timestamp for tag
         run: echo "ts=$(TZ=America/New_York date +'%Y%m%d_%H%M%S')" >> $GITHUB_OUTPUT
-    
+
+      - name: Set RELEASE_TAG_NAME env
+        run: echo "RELEASE_TAG_NAME=${{ steps.build_timestamp.outputs.ts }}" >> $GITHUB_ENV
+
       - name: Checkout
         uses: actions/checkout@v3
         with:
@@ -180,7 +183,8 @@ jobs:
           asset_path: "./${{ inputs.release-artifact-tarball-filename }}"
           asset_name: "${{ inputs.release-artifact-tarball-filename }}"
           asset_content_type: application/tar+gzip 
-          
+    outputs:
+      release_name: ${{ steps.build_timestamp.outputs.ts }}    
   
   create-release-semvar:
     if: inputs.release-tag-name-type == 'semvar'
@@ -265,9 +269,30 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: "./${{ inputs.release-artifact-tarball-filename }}"
           asset_name: "${{ inputs.release-artifact-tarball-filename }}"
-          asset_content_type: application/tar+gzip 
+          asset_content_type: application/tar+gzip
+    outputs:
+      release_name: ${{ env.RELEASE_TAG_NAME }}    
   
-  
+  notify:
+    name: Release Notification
+    needs: [create-release-semvar, create-release-iso]
+    if: ${{ always() && !cancelled() && (needs.create-release-semvar.result == 'success' || needs.create-release-iso.result == 'success') }}
+    runs-on: ubuntu-latest
+    steps:
+
+      - if: needs.create-release-semvar.result == 'success'
+        run: echo "RELEASE_TAG_NAME=${{ needs.create-release-semvar.outputs.build_artifact }}" >> $GITHUB_ENV
+      - if: needs.create-release-iso.result == 'success'
+        run: echo "RELEASE_TAG_NAME=${{ needs.create-release-iso.outputs.build_artifact }}" >> $GITHUB_ENV
+      
+      - uses: rtCamp/action-slack-notify@v2.2.0
+        env:
+          MSG_MINIMAL: true
+          SLACK_COLOR: '#c32a26'
+          SLACK_MESSAGE: "```ref: ${{ github.ref }}\nworkflow_ref: ${{ github.workflow_ref }}```"
+          SLACK_TITLE: 'Ready to Deploy :rocket: - `${{ github.repository }}` Release ${{ env.RELEASE_TAG_NAME }}'
+          SLACK_USERNAME: rrchnm-systems
+          SLACK_WEBHOOK: ${{ secrets.SLACK_SYSTEMS_WEBHOOK }}
   
   
   
