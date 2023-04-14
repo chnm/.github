@@ -248,6 +248,7 @@ jobs:
   notify:
     name: Release Notification
     needs: create-release
+    if: ${{ always() && !cancelled() && needs.create-release.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
 
