@@ -242,7 +242,8 @@ jobs:
           asset_path: "./${{ inputs.release-artifact-tarball-filename }}"
           asset_name: "${{ inputs.release-artifact-tarball-filename }}"
           asset_content_type: application/tar+gzip
-
+    outputs:
+      release_name: ${{ env.RELEASE_NAME }}
 
   notify:
     name: Release Notification
@@ -250,17 +251,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
-      - if: inputs.release-tag-name-type == 'iso'
-        run: echo "RELEASE_NAME=${{ needs.iso.outputs.release_name }}" >> $GITHUB_ENV
-      - if: inputs.release-tag-name-type == 'semvar'
-        run: echo "RELEASE_NAME=${{ needs.semvar.outputs.release_name }}" >> $GITHUB_ENV
-      
       - uses: rtCamp/action-slack-notify@v2.2.0
         env:
           MSG_MINIMAL: true
           SLACK_COLOR: '#c32a26'
           SLACK_MESSAGE: "```ref: ${{ github.ref }}\nworkflow_ref: ${{ github.workflow_ref }}```"
-          SLACK_TITLE: 'Ready to Deploy :rocket: - `${{ github.repository }}` Release ${{ env.RELEASE_NAME }}'
+          SLACK_TITLE: 'Ready to Deploy :rocket: - `${{ github.repository }}` Release ${{ needs.create-release.outputs.release_name }}'
           SLACK_USERNAME: rrchnm-systems
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_SYSTEMS }}
   
