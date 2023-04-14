@@ -176,7 +176,7 @@ jobs:
   create-release:
     name: Create Release
     needs: [semvar, iso]
-    if: ${{ always() && !cancelled() && (needs.create-release-semvar.result == 'success' || needs.create-release-iso.result == 'success') }}
+    if: ${{ always() && !cancelled() && (needs.semvar.result == 'success' || needs.iso.result == 'success') }}
     runs-on: ubuntu-latest
     steps:
 
