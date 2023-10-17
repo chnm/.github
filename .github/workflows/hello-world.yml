@@ -17,6 +17,7 @@ jobs:
 
   notify:
     name: Release Notification
+    needs: [echo]
     runs-on: self-hosted
     steps:
 
