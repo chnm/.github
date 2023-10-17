@@ -14,18 +14,3 @@ jobs:
     steps:
       - run: hostname
       - run: uname -a
-
-  notify:
-    name: Release Notification
-    needs: [echo]
-    runs-on: self-hosted
-    steps:
-
-      - uses: rtCamp/action-slack-notify@v2.2.0
-        env:
-          MSG_MINIMAL: true
-          SLACK_COLOR: '#c32a26'
-          SLACK_MESSAGE: "```ref: ${{ github.ref }}\nworkflow_ref: ${{ github.workflow_ref }}```"
-          SLACK_TITLE: 'testing restricted workflows for self-hosted GitHub Actions runners -- ${{ inputs.param-one }}'
-          SLACK_USERNAME: rrchnm-systems
-          SLACK_WEBHOOK: "${{ secrets.SLACK_WEBHOOK_SYSTEMS }}"
