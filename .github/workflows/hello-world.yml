@@ -9,6 +9,12 @@ on:
 
 jobs: 
 
+  echo:
+    runs-on: self-hosted
+    steps:
+      - run: hostname
+      - run: uname -a
+
   notify:
     name: Release Notification
     runs-on: self-hosted
