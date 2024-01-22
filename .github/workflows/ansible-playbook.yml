@@ -9,7 +9,7 @@ on:
 
 jobs: 
 
-  echo:
+  ansible-playbook:
     runs-on: self-hosted
     steps:
       - run: run-ansible-playbook.sh playbooks/${{ inputs.playbook }}
