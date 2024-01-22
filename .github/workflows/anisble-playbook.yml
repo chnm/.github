@@ -1,0 +1,16 @@
+name: ansible-playbook
+
+on:
+  workflow_call:
+    inputs:
+      playbook:                # name of ansible playbook to run
+        required: true
+        type: string
+
+jobs: 
+
+  echo:
+    runs-on: self-hosted
+    steps:
+      - run: echo "4{{ inputs.playbook }}"
+      - run: run-ansible-playbook.sh "playbooks/${{ inputs.playbook }}"
