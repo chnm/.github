@@ -15,4 +15,4 @@ jobs:
       - run: echo "${{ inputs.playbook }}"
 
       - shell: bash
-        run: run-ansible-playbook.sh "playbooks/${{ inputs.playbook }}"
+        run: run-ansible-playbook.sh playbooks/${{ inputs.playbook }}
