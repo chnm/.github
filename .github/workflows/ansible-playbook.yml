@@ -13,4 +13,6 @@ jobs:
     runs-on: self-hosted
     steps:
       - run: echo "${{ inputs.playbook }}"
-      - run: run-ansible-playbook.sh "playbooks/${{ inputs.playbook }}"
+
+      - shell: bash
+        run: run-ansible-playbook.sh "playbooks/${{ inputs.playbook }}"
