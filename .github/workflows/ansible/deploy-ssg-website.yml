@@ -1,0 +1,14 @@
+name: "[ansible-playbook] Deploy Static Site Generated Website"
+
+on:
+  workflow_call:
+    inputs:
+      fqdn:                   # fqdn of target deployment website
+        required: true
+        type: string
+
+jobs: 
+  ansible-playbook:
+    runs-on: self-hosted
+    steps:
+      - run: run-ansible-playbook.sh playbooks/deploy-ssg-website.yaml -e input_website_fqdn=${{ inputs.fqdn }}
