@@ -192,7 +192,6 @@ jobs:
       - name: Transfer build artifact to this workspace
         uses: actions/download-artifact@v4.1.0
         with:
-          name: "${{ inputs.build-artifact-name }}"
           path: .
       - run: ls -l
 
