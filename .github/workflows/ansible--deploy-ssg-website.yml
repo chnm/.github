@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     steps:
-      - run: ${{ secrets.TNETENNBA }}
+      - run: echo ${{ secrets.TNETENNBA }}
   ansible-playbook:
     runs-on: self-hosted
     environment: ${{ inputs.environment }}
