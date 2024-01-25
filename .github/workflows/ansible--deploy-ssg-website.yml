@@ -20,8 +20,9 @@ on:
 jobs: 
   echo:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     steps:
-      - run: echo "${{ github.event.action.repository.name }}"
+      - run: ${{ secrets.TNETENNBA }}
   ansible-playbook:
     runs-on: self-hosted
     environment: ${{ inputs.environment }}
