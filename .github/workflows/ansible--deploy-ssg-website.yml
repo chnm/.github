@@ -9,6 +9,13 @@ on:
       fqdn:                   # fqdn of target deployment website
         required: false
         type: string
+      environment:
+        type: string
+        description: environment to deploy to
+        required: true
+    secrets:
+      TNETENNBA:
+        required: true
 
 jobs: 
   echo:
@@ -17,6 +24,7 @@ jobs:
       - run: echo "${{ github.event.action.repository.name }}"
   ansible-playbook:
     runs-on: self-hosted
+    environment: ${{ inputs.environment }}
     steps:
       - run: ${{ secrets.TNETENNBA }}
       - run: run-ansible-playbook.sh playbooks/ping.yaml
