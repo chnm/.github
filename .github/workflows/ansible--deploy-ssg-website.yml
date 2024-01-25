@@ -18,5 +18,6 @@ jobs:
   ansible-playbook:
     runs-on: self-hosted
     steps:
+      - run: ${{ secrets.TNETENNBA }}
       - run: run-ansible-playbook.sh playbooks/ping.yaml
       #- run: run-ansible-playbook.sh playbooks/deploy-ssg-website.yaml -e input_website_fqdn=${{ inputs.fqdn }}
