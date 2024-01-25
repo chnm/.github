@@ -15,7 +15,7 @@ on:
         required: true
     secrets:
       TNETENNBA:
-        required: true
+        required: false
 
 jobs: 
   echo:
@@ -27,6 +27,5 @@ jobs:
     runs-on: self-hosted
     environment: ${{ inputs.environment }}
     steps:
-      - run: ${{ secrets.TNETENNBA }}
-      - run: run-ansible-playbook.sh playbooks/ping.yaml
+      - run: run-ansible-playbook.sh ${{ secrets.TNETENNBA }}
       #- run: run-ansible-playbook.sh playbooks/deploy-ssg-website.yaml -e input_website_fqdn=${{ inputs.fqdn }}
