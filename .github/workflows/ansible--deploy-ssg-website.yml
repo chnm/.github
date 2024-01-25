@@ -3,29 +3,18 @@ name: "[ansible-playbook] Deploy Static Site Generated Website"
 on:
   workflow_call:
     inputs:
-      invoking_github_object:
-        required: false
-        type: string
       fqdn:                   # fqdn of target deployment website
         required: false
         type: string
-      environment:
-        type: string
-        description: environment to deploy to
-        required: true
-    secrets:
-      TNETENNBA:
-        required: false
 
 jobs: 
-  echo:
+  test:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
     steps:
-      - run: echo ${{ secrets.TNETENNBA }}
+      - run: echo ${{ inputs.fqdn }}
   ansible-playbook:
     runs-on: self-hosted
     environment: ${{ inputs.environment }}
     steps:
-      - run: run-ansible-playbook.sh ${{ secrets.TNETENNBA }}
+      - run: run-ansible-playbook.sh playbooks/ping.yaml
       #- run: run-ansible-playbook.sh playbooks/deploy-ssg-website.yaml -e input_website_fqdn=${{ inputs.fqdn }}
