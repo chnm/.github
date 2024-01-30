@@ -67,8 +67,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: 'chnm/.github'
-      - run: ls -lta ./.github
-      - run: ls -lta ./.github/scripts
+          ref: 'hugo-workflow'
+
       - run: ./.github/scripts/validate_input.sh
         env:
           WEBSITE_FQDN: "${{ inputs.website-fqdn }}"
