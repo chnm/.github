@@ -1,5 +1,9 @@
 #!/bin/sh
 
+# this shell script will validate inputs used in the reusable workflows located
+# under .github/workflows/* and expects the inputs to be passed via environment variables.
+
+# validate website-fqdn input used in hugo build-release-deploy workflow
 if [ -n "$WEBSITE_FQDN" ]; then
   case "$WEBSITE_FQDN" in
     "deathbynumbers.org"|\
