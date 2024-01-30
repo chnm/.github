@@ -63,11 +63,14 @@ jobs:
           echo "ref_type: ${{ github.ref_type }}"
           echo "ref: ${{ github.ref }}"
           echo "sha: ${{ github.sha }}"
+  
       - uses: actions/checkout@v4
         with:
           repository: 'chnm/.github'
-      - run: ls -lta
-      - uses: andymckay/cancel-action@0.3
+
+      - run: scripts/validate_input.sh
+        env:
+          WEBSITE_FQDN: "${{ inputs.website-fqdn }}"
 
 #################
 ###   BUILD   ###
