@@ -69,7 +69,7 @@ jobs:
           repository: 'chnm/.github'
           ref: 'hugo-workflow'
 
-      - run: ./.github/scripts/validate_input.sh
+      - run: ./.github/scripts/validate_inputs.sh
         env:
           WEBSITE_FQDN: "${{ inputs.website-fqdn }}"
 
