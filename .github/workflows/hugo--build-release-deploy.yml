@@ -45,26 +45,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          echo "${{ github.run_id }}"
-          echo "${{ github.workflow }}"
-          echo "${{ github.workflow_ref }}"
-          echo "${{ github.workflow_sha }}"
-          echo "${{ github.workspace }}"
-          echo "${{ github.repository }}"
-          echo "${{ github.repository_owner }}"
-          echo "${{ github.event.repository.name }}"
-          echo "${{ github.repository-url }}"
-          echo "${{ github.action_ref }}"
-          echo "${{ github.event_name }}"
-          echo "${{ github.actor }}"
-          echo "${{ github.triggering_actor }}"
-          echo "${{ github.base_ref }}"
-          echo "${{ github.ref_name }}"
-          echo "${{ github.ref_type }}"
-          echo "${{ github.ref }}"
-          echo "${{ github.sha }}"
+          echo "run_id: ${{ github.run_id }}"
+          echo "workflow: ${{ github.workflow }}"
+          echo "workflow_ref: ${{ github.workflow_ref }}"
+          echo "workflow_sha: ${{ github.workflow_sha }}"
+          echo "workspace: ${{ github.workspace }}"
+          echo "repository: ${{ github.repository }}"
+          echo "repository_owner: ${{ github.repository_owner }}"
+          echo "event.repository_name: ${{ github.event.repository.name }}"
+          echo "repositoryUrl: ${{ github.repositoryUrl }}"
+          echo "action_ref: ${{ github.action_ref }}"
+          echo "event_name: ${{ github.event_name }}"
+          echo "actor: ${{ github.actor }}"
+          echo "triggering_actor: ${{ github.triggering_actor }}"
+          echo "base_ref: ${{ github.base_ref }}"
+          echo "ref_name: ${{ github.ref_name }}"
+          echo "ref_type: ${{ github.ref_type }}"
+          echo "ref: ${{ github.ref }}"
+          echo "sha: ${{ github.sha }}"
 
-      - uses: andymckay/cancel-action@0.3
+      #- uses: andymckay/cancel-action@0.3
 
 #################
 ###   BUILD   ###
