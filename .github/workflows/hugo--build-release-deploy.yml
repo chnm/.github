@@ -136,7 +136,26 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - run: echo ${{ github.repository }}
+      - run: |
+          echo "${{ github.run_id }}"
+          echo "${{ github.workflow }}"
+          echo "${{ github.workflow_ref }}"
+          echo "${{ github.workflow_sha }}"
+          echo "${{ github.workspace }}"
+          echo "${{ github.repository }}"
+          echo "${{ github.repository_owner }}"
+          echo "${{ github.event.repository.name }}"
+          echo "${{ github.repository-url }}"
+          echo "${{ github.action_ref }}"
+          echo "${{ github.event_name }}"
+          echo "${{ github.actor }}"
+          echo "${{ github.triggering_actor }}"
+          echo "${{ github.base_ref }}"
+          echo "${{ github.ref_name }}"
+          echo "${{ github.ref_type }}"
+          echo "${{ github.ref }}"
+          echo "${{ github.sha }}"
+
       - uses: andymckay/cancel-action@0.3
 
 #################
