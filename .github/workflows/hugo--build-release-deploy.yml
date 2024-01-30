@@ -67,8 +67,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: 'chnm/.github'
-
-      - run: scripts/validate_input.sh
+      - run: ls -lta
+      - run: ./.github/scripts/validate_input.sh
         env:
           WEBSITE_FQDN: "${{ inputs.website-fqdn }}"
 
