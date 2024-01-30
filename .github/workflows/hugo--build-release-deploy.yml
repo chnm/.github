@@ -273,7 +273,7 @@ jobs:
   release-create:
     name: Create Release
     needs: [release-semvar, release-iso]
-    if: needs.release-semvar.result == 'success' || needs.release-iso.result == 'success'
+    if: ${{ always() && !cancelled() && (needs.release-semvar.result == 'success' || needs.release-iso.result == 'success') }}
     runs-on: ubuntu-latest
     steps:
 
@@ -345,7 +345,7 @@ jobs:
   release-notify:
     name: Release Notification
     needs: release-create
-    if: needs.release-create.result == 'success'
+    if: ${{ always() && !cancelled() && needs.release-create.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: rtCamp/action-slack-notify@v2.2.0
@@ -366,7 +366,7 @@ jobs:
   deploy-ansible-playbook:
     runs-on: self-hosted
     needs: release-create
-    if: needs.release-create.result == 'success'
+    if: ${{ always() && !cancelled() && needs.release-create.result == 'success' }}
     steps:
       - run: run-ansible-playbook.sh playbooks/deploy-ssg-website.yaml -e input_website_fqdn=${{ inputs.website-fqdn }}
 
