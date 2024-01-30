@@ -3,98 +3,6 @@ name: Hugo Build, Release, and Deploy Reusable Workflow
 on:
   workflow_call:
     inputs:
-      # GitHub Input Vars
-      github-run-id:
-        description: ''
-        default: ''
-        required: false
-        type: string
-      github-workflow:
-        description: ''
-        default: ''
-        required: false
-        type: string
-      github-workflow-ref:
-        description: ''
-        default: ''
-        required: false
-        type: string
-      github-workflow-sha:
-        description: ''
-        default: ''
-        required: false
-        type: string
-      github-workspace:
-        description: ''
-        default: ''
-        required: false
-        type: string
-      github-repository:
-        description: ''
-        default: ''
-        required: false
-        type: string
-      github-repository-owner:
-        description: ''
-        default: ''
-        required: false
-        type: string
-      github-repository-name:
-        description: ''
-        default: ''
-        required: false
-        type: string
-      github-repository-url:
-        description: ''
-        default: ''
-        required: false
-        type: string
-      github-action-ref:
-        description: ''
-        default: ''
-        required: false
-        type: string
-      github-event-name:
-        description: ''
-        default: ''
-        required: false
-        type: string
-      github-actor:
-        description: ''
-        default: ''
-        required: false
-        type: string
-      github-triggering-actor:
-        description: ''
-        default: ''
-        required: false
-        type: string
-      github-base-ref:
-        description: ''
-        default: ''
-        required: false
-        type: string
-      github-ref-name:
-        description: ''
-        default: ''
-        required: false
-        type: string
-      github-ref-type:
-        description: ''
-        default: ''
-        required: false
-        type: string
-      github-ref:
-        description: ''
-        default: ''
-        required: false
-        type: string
-      github-sha:
-        description: ''
-        default: ''
-        required: false
-        type: string
-
       # Build Input Vars
       container-registry:                 # container registry e.g. ghcr.io
         required: true
@@ -164,18 +72,16 @@ jobs:
 
   build-hugo:
     runs-on: ubuntu-latest
+    needs: validate
     permissions:
       packages: write
     steps:
       - uses: actions/checkout@v4
       
-      - run: echo ${{ env.GITHUB_TOKEN }}
-      - run: echo ${{ secrets.GH_TOKEN_PACKAGES_WRITE }}
-      
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
         with:
-          username: ${{ inputs.github-repository-owner }}
+          username: ${{ github.repository_owner }}
           password: ${{ env.GITHUB_TOKEN }}
           registry: ${{ inputs.container-registry }}
 
@@ -188,7 +94,7 @@ jobs:
           platforms: linux/amd64
 
       - name: Build Docker Image (devl)
-        if: inputs.github-ref == 'refs/heads/preview'
+        if: github.ref == 'refs/heads/preview'
         uses: docker/build-push-action@v4
         with:
           context: "${{ inputs.hugo-context-root }}"
@@ -199,7 +105,7 @@ jobs:
             hugobuildargs=--cleanDestinationDir --buildDrafts --buildFuture --baseURL ${{ inputs.hugo-devl-url }}
 
       - name: Build Docker Image (prod)
-        if: inputs.github-ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main'
         uses: docker/build-push-action@v4
         with:
           context: "${{ inputs.hugo-context-root }}"
@@ -263,7 +169,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          repository: "${{ inputs.github-repository }}"
+          repository: "${{ github.repository }}"
           fetch-depth: 0 # required for github-action-get-previous-tag
 
       - id: previoustag
@@ -322,24 +228,24 @@ jobs:
         run: |
           echo '`github` context:' > RELEASE.md
           echo '```' >> RELEASE.md
-          echo "run_id: ${{ inputs.github-run-id }}" >> RELEASE.md
-          echo "workflow: ${{ inputs.github-workflow }}" >> RELEASE.md
-          echo "workflow_ref: ${{ inputs.github-workflow-ref }}" >> RELEASE.md
-          echo "workflow_sha: ${{ inputs.github-workflow-sha }}" >> RELEASE.md
-          echo "workspace: ${{ inputs.github-workspace }}" >> RELEASE.md
-          echo "repository: ${{ inputs.github-repository }}" >> RELEASE.md
-          echo "repository_owner: ${{ inputs.github-repository-owner }}" >> RELEASE.md
-          echo "repository_name: ${{ inputs.github-repository-name }}" >> RELEASE.md
-          echo "repositoryUrl: ${{ inputs.github-repositoryUrl }}" >> RELEASE.md
-          echo "action_ref: ${{ inputs.github-action-ref }}" >> RELEASE.md
-          echo "event_name: ${{ inputs.github-event-name }}" >> RELEASE.md
-          echo "actor: ${{ inputs.github-actor }}" >> RELEASE.md
-          echo "triggering_actor: ${{ inputs.github-triggering-actor }}" >> RELEASE.md
-          echo "base_ref: ${{ inputs.github-base-ref }}" >> RELEASE.md
-          echo "ref_name: ${{ inputs.github-ref-name }}" >> RELEASE.md
-          echo "ref_type: ${{ inputs.github-ref-type }}" >> RELEASE.md
-          echo "ref: ${{ inputs.github-ref }}" >> RELEASE.md
-          echo "sha: ${{ inputs.github-sha }}" >> RELEASE.md
+          echo "run_id: ${{ github.run_id }}" >> RELEASE.md
+          echo "workflow: ${{ github.workflow }}" >> RELEASE.md
+          echo "workflow_ref: ${{ github.workflow_ref }}" >> RELEASE.md
+          echo "workflow_sha: ${{ github.workflow_sha }}" >> RELEASE.md
+          echo "workspace: ${{ github.workspace }}" >> RELEASE.md
+          echo "repository: ${{ github.repository }}" >> RELEASE.md
+          echo "repository_owner: ${{ github.repository_owner }}" >> RELEASE.md
+          echo "repository_name: ${{ github.event.repository.name }}" >> RELEASE.md
+          echo "repositoryUrl: ${{ github.repositoryUrl }}" >> RELEASE.md
+          echo "action_ref: ${{ github.action_ref }}" >> RELEASE.md
+          echo "event_name: ${{ github.event_name }}" >> RELEASE.md
+          echo "actor: ${{ github.actor }}" >> RELEASE.md
+          echo "triggering_actor: ${{ github.triggering_actor }}" >> RELEASE.md
+          echo "base_ref: ${{ github.base_ref }}" >> RELEASE.md
+          echo "ref_name: ${{ github.ref_name }}" >> RELEASE.md
+          echo "ref_type: ${{ github.ref_type }}" >> RELEASE.md
+          echo "ref: ${{ github.ref }}" >> RELEASE.md
+          echo "sha: ${{ github.sha }}" >> RELEASE.md
           echo '```' >> RELEASE.md
 
       - id: create_release
@@ -348,8 +254,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          owner: "${{ inputs.github-repository-owner }}"
-          repo: "${{ inputs.github-repository-name }}"
+          owner: "${{ github.repository_owner }}"
+          repo: "${{ github.repository_name }}"
           release_name: ${{ env.RELEASE_NAME }}
           tag_name: ${{ env.RELEASE_TAG_NAME }}
           body_path: "./RELEASE.md" 
