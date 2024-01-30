@@ -136,7 +136,7 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - run: ls -lta
+      - run: echo ${{ github.repository }}
       - uses: andymckay/cancel-action@0.3
 
 #################
