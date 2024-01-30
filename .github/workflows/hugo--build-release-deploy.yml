@@ -273,7 +273,7 @@ jobs:
   release-create:
     name: Create Release
     needs: [release-semvar, release-iso]
-    if: ${{ always() && !cancelled() && (needs.release-semvar.result == 'success' || needs.release-iso.result == 'success') }}
+    if: needs.release-semvar.result == 'success' || needs.release-iso.result == 'success'
     runs-on: ubuntu-latest
     steps:
 
