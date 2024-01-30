@@ -63,8 +63,11 @@ jobs:
           echo "ref_type: ${{ github.ref_type }}"
           echo "ref: ${{ github.ref }}"
           echo "sha: ${{ github.sha }}"
-
-      #- uses: andymckay/cancel-action@0.3
+      - uses: actions/checkout@v4
+        with:
+          repository: 'chnm/.github'
+      - run: ls -lta
+      - uses: andymckay/cancel-action@0.3
 
 #################
 ###   BUILD   ###
