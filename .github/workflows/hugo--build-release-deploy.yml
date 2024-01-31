@@ -67,7 +67,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: 'chnm/.github'
-          ref: 'hugo-workflow'
+          ref: 'main'
 
       - run: ./.github/scripts/validate_inputs.sh
         env:
