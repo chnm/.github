@@ -8,6 +8,7 @@
 if [ -n "$WEBSITE_FQDN" ]; then
   case "$WEBSITE_FQDN" in
     "connectingthreads.co.uk"|\
+    "datascribe.tech"|\
     "dev.connectingthreads.co.uk"|\
     "deathbynumbers.org"|\
     "dev.deathbynumbers.org"|\
