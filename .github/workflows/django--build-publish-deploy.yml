@@ -25,8 +25,6 @@ on:
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   CONTAINER_TAG: "${{ inputs.container-registry }}/chnm/${{ inputs.container-image-name }}:latest"
-  RELEASE_NAME: ''
-  RELEASE_TAG_NAME: ''
   WEBSITE_FQDN: ''
 
 jobs:
