@@ -107,7 +107,7 @@ jobs:
         env:
           MSG_MINIMAL: true
           SLACK_COLOR: '#fab005'
-          SLACK_TITLE: 'Built and Published Package: `${{ env.CONTAINER_TAG }}` :package:'
+          SLACK_TITLE: 'Built and Published Package :package: `${{ env.CONTAINER_TAG }}`'
           SLACK_MESSAGE: "```sha: ${{ github.sha }}\nref: ${{ github.ref }}\nworkflow_ref: ${{ github.workflow_ref }}```"
           SLACK_USERNAME: rrchnm-systems
           SLACK_WEBHOOK: "${{ secrets.SLACK_WEBHOOK_SYSTEMS }}"
@@ -122,7 +122,7 @@ jobs:
         env:
           MSG_MINIMAL: true
           SLACK_COLOR: '#c32a26'
-          SLACK_TITLE: 'Build or Publish Package Failure: `${{ env.CONTAINER_TAG }}` :package:'
+          SLACK_TITLE: 'Build or Publish Package Failure :x: `${{ env.CONTAINER_TAG }}`'
           SLACK_MESSAGE: "```sha: ${{ github.sha }}\nref: ${{ github.ref }}\nworkflow_ref: ${{ github.workflow_ref }}```"
           SLACK_USERNAME: rrchnm-systems
           SLACK_WEBHOOK: "${{ secrets.SLACK_WEBHOOK_SYSTEMS }}"
