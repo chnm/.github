@@ -97,4 +97,33 @@ jobs:
           push: true
           tags: "${{ env.CONTAINER_TAG }}"
           platforms: linux/amd64
-
+  
+  notify-success:
+    name: Success Notification
+    needs: build-publish
+    if: ${{ always() && !cancelled() && needs.build-publish.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: rtCamp/action-slack-notify@v2.2.0
+        env:
+          MSG_MINIMAL: true
+          SLACK_COLOR: '#fab005'
+          SLACK_TITLE: 'Built and Published Package: `${{ env.CONTAINER_TAG }}` :package:'
+          SLACK_MESSAGE: "```sha: ${{ github.sha }}\nref: ${{ github.ref }}\nworkflow_ref: ${{ github.workflow_ref }}```"
+          SLACK_USERNAME: rrchnm-systems
+          SLACK_WEBHOOK: "${{ secrets.SLACK_WEBHOOK_SYSTEMS }}"
+  
+  notify-failure:
+    name: Failure Notification
+    needs: build-publish
+    if: ${{ always() && !cancelled() && needs.build-publish.result != 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: rtCamp/action-slack-notify@v2.2.0
+        env:
+          MSG_MINIMAL: true
+          SLACK_COLOR: '#c32a26'
+          SLACK_TITLE: 'Build or Publish Package Failure: `${{ env.CONTAINER_TAG }}` :package:'
+          SLACK_MESSAGE: "```sha: ${{ github.sha }}\nref: ${{ github.ref }}\nworkflow_ref: ${{ github.workflow_ref }}```"
+          SLACK_USERNAME: rrchnm-systems
+          SLACK_WEBHOOK: "${{ secrets.SLACK_WEBHOOK_SYSTEMS }}"
