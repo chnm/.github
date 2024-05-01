@@ -1,4 +1,4 @@
-name: Django Build, Publish, and Deploy Reusable Workflow
+name: Django Build and Publish Reusable Workflow
 
 on:
   workflow_call:
