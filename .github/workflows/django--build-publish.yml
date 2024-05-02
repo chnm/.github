@@ -1,0 +1,129 @@
+name: Django Build and Publish Reusable Workflow
+
+on:
+  workflow_call:
+    inputs:
+      # Build Input Vars
+      container-registry:                 # container registry e.g. ghcr.io
+        required: true
+        type: string
+      container-image-name:               # name of container image i.e. github package
+        required: true
+        type: string
+      django-context-root:                  # root path for hugo build
+        required: true
+        type: string
+
+      # Deployment Input Vars
+      website-devl-fqdn:                  # fqdn of development website
+        required: true
+        type: string
+      website-prod-fqdn:                  # fqdn of production website
+        required: true
+        type: string
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  CONTAINER_TAG: "${{ inputs.container-registry }}/chnm/${{ inputs.container-image-name }}:latest"
+  WEBSITE_FQDN: ''
+
+jobs:
+
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print GitHub Context Vars
+        run: |
+          echo "run_id: ${{ github.run_id }}"
+          echo "workflow: ${{ github.workflow }}"
+          echo "workflow_ref: ${{ github.workflow_ref }}"
+          echo "workflow_sha: ${{ github.workflow_sha }}"
+          echo "workspace: ${{ github.workspace }}"
+          echo "repository: ${{ github.repository }}"
+          echo "repository_owner: ${{ github.repository_owner }}"
+          echo "event.repository_name: ${{ github.event.repository.name }}"
+          echo "repositoryUrl: ${{ github.repositoryUrl }}"
+          echo "action_ref: ${{ github.action_ref }}"
+          echo "event_name: ${{ github.event_name }}"
+          echo "actor: ${{ github.actor }}"
+          echo "triggering_actor: ${{ github.triggering_actor }}"
+          echo "base_ref: ${{ github.base_ref }}"
+          echo "ref_name: ${{ github.ref_name }}"
+          echo "ref_type: ${{ github.ref_type }}"
+          echo "ref: ${{ github.ref }}"
+          echo "sha: ${{ github.sha }}"
+  
+      - name: Set WEBSITE_FQDN devl Env Var
+        if: github.ref == 'refs/heads/preview'
+        run: echo "WEBSITE_FQDN=${{ inputs.website-devl-fqdn }}" >> $GITHUB_ENV
+      - name: Set WEBSITE_FQDN prod Env Var
+        if: github.ref == 'refs/heads/main'
+        run: echo "WEBSITE_FQDN=${{ inputs.website-prod-fqdn }}" >> $GITHUB_ENV
+
+      - uses: actions/checkout@v4
+        with:
+          repository: 'chnm/.github'
+          ref: 'main'
+      - name: Run Validate Inputs Script
+        run: ./.github/scripts/validate_inputs.sh
+        env:
+          WEBSITE_FQDN: "${{ env.WEBSITE_FQDN }}"
+
+    outputs:
+      website_fqdn: ${{ env.WEBSITE_FQDN }}    
+
+  build-publish:
+    runs-on: ubuntu-latest
+    needs: setup
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: '${{ github.repository }}'   # the invoking repository
+      
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          username: ${{ github.repository_owner }}
+          password: ${{ env.GITHUB_TOKEN }}
+          registry: ${{ inputs.container-registry }}
+
+      # build and publish
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v4
+        with:
+          context: "${{ inputs.django-context-root }}"
+          push: true
+          tags: "${{ env.CONTAINER_TAG }}"
+          platforms: linux/amd64
+  
+  notify-success:
+    name: Success Notification
+    needs: build-publish
+    if: ${{ always() && !cancelled() && needs.build-publish.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: rtCamp/action-slack-notify@v2.2.0
+        env:
+          MSG_MINIMAL: true
+          SLACK_COLOR: '#fab005'
+          SLACK_TITLE: 'Built and Published Package :package: `${{ env.CONTAINER_TAG }}`'
+          SLACK_MESSAGE: "```sha: ${{ github.sha }}\nref: ${{ github.ref }}\nworkflow_ref: ${{ github.workflow_ref }}```"
+          SLACK_USERNAME: rrchnm-systems
+          SLACK_WEBHOOK: "${{ secrets.SLACK_WEBHOOK_SYSTEMS }}"
+  
+  notify-failure:
+    name: Failure Notification
+    needs: build-publish
+    if: ${{ always() && !cancelled() && needs.build-publish.result != 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: rtCamp/action-slack-notify@v2.2.0
+        env:
+          MSG_MINIMAL: true
+          SLACK_COLOR: '#c32a26'
+          SLACK_TITLE: 'Build or Publish Package Failure :x: `${{ env.CONTAINER_TAG }}`'
+          SLACK_MESSAGE: "```sha: ${{ github.sha }}\nref: ${{ github.ref }}\nworkflow_ref: ${{ github.workflow_ref }}```"
+          SLACK_USERNAME: rrchnm-systems
+          SLACK_WEBHOOK: "${{ secrets.SLACK_WEBHOOK_SYSTEMS }}"
