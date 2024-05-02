@@ -14,6 +14,7 @@ if [ -n "$WEBSITE_FQDN" ]; then
     "dev.deathbynumbers.org"|\
     "earlymodernviolence.org"|\
     "dev.earlymodernviolence.org"|\
+    "dev.lasfera.rrchnm.org"|\
     "mathhumanists.org"|\
     "religiousecologies.org"|\
     "dev.religiousecologies.org"|\
