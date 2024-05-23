@@ -18,6 +18,7 @@ if [ -n "$WEBSITE_FQDN" ]; then
     "mathhumanists.org"|\
     "religiousecologies.org"|\
     "dev.religiousecologies.org"|\
+    "dev.winterthur.rrchnm.org"|\
     "test1.rrchnm.org")
         exit 0
     ;;
