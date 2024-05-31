@@ -69,7 +69,7 @@ jobs:
   deploy-notify:
     name: Deployment Notification
     needs: deploy-ansible-playbook
-    if: ${{ always() && !cancelled() && (needs.deploy-ansible-playbook.result != 'success' || needs.release-create.result != 'success') }}
+    if: ${{ always() && !cancelled() && (needs.deploy-ansible-playbook.result != 'success') }}
     runs-on: ubuntu-latest
     steps:
       - uses: rtCamp/action-slack-notify@v2.2.0
