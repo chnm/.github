@@ -24,7 +24,7 @@ on:
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  CONTAINER_TAG: "${{ inputs.container-registry }}/chnm/${{ inputs.container-image-name }}:${{ github.ref_name }}"
+  CONTAINER_TAG: "${{ inputs.container-registry }}/chnm/${{ inputs.container-image-name }}:latest"
   WEBSITE_FQDN: ''
 
 jobs:
