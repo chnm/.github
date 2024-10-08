@@ -126,7 +126,7 @@ jobs:
           tags: "${{ env.CONTAINER_TAG }}"
           platforms: linux/amd64
           build-args: |
-            hugobuildargs=--cleanDestinationDir --buildDrafts --buildFuture --baseURL ${{ inputs.hugo-devl-url }}
+            hugobuildargs=--environment development --cleanDestinationDir --buildDrafts --buildFuture --baseURL ${{ inputs.hugo-devl-url }}
 
       - name: Build Docker Image (prod)
         if: github.ref == 'refs/heads/main'
@@ -137,7 +137,7 @@ jobs:
           tags: "${{ env.CONTAINER_TAG }}"
           platforms: linux/amd64
           build-args: |
-            hugobuildargs=--cleanDestinationDir --minify --baseURL ${{ inputs.hugo-prod-url }}
+            hugobuildargs=--environment production --cleanDestinationDir --minify --baseURL ${{ inputs.hugo-prod-url }}
 
       - name: Extract build artifact from docker image
         uses: shrink/actions-docker-extract@v2
