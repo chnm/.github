@@ -9,7 +9,6 @@ if [ -n "$WEBSITE_FQDN" ]; then
   case "$WEBSITE_FQDN" in
     "connectingthreads.co.uk"|\
     "datascribe.tech"|\
-    "dev.connectingthreads.rrchnm.org"|\
     "deathbynumbers.org"|\
     "dev.deathbynumbers.org"|\
     "earlymodernviolence.org"|\
