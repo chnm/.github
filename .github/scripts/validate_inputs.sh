@@ -10,6 +10,8 @@ if [ -n "$WEBSITE_FQDN" ]; then
     "civilwargraffiti.org"|\
     "dev.civilwargraffiti.org"|\
     "connectingthreads.co.uk"|\
+    "crdh.rrchnm.org"|\
+    "dev.crdh.rrchnm.org"|\
     "datascribe.tech"|\
     "deathbynumbers.org"|\
     "dev.deathbynumbers.org"|\
