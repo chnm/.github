@@ -190,7 +190,7 @@ jobs:
           echo "RELEASE_TAG_NAME=${{ needs.semvar.outputs.release_tag_name }}" >> $GITHUB_ENV
 
       - name: Transfer build artifact to this workspace
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: "${{ inputs.build-artifact-name }}"
           path: .
