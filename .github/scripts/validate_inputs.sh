@@ -15,6 +15,7 @@ if [ -n "$WEBSITE_FQDN" ]; then
     "datascribe.tech"|\
     "deathbynumbers.org"|\
     "dev.deathbynumbers.org"|\
+    "denigmanuscript.org"|\
     "earlymodernviolence.org"|\
     "dev.earlymodernviolence.org"|\
     "dev.lasfera.rrchnm.org"|\
