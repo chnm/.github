@@ -64,12 +64,15 @@ jobs:
     needs: [setup]
     if: ${{ always() && !cancelled() && needs.setup.result == 'success' }}
     steps:
-      - env: 
-          GH_CTX: '{ "github_context": ${{ toJson(github) }} }'
+      - run: |
+          echo '{ "github_context": ${{ toJSON(github) }} }' > github-context.json
+          cat github-context.json
+      - env:
+          GITHUB_CONTEXT_PATH: "${{ github.workspace }}/github-context.json"
         run: |
           run-ansible-playbook.sh playbooks/deploy-docker-compose.yaml \
-          -e '"input_website_fqdn=${{ needs.setup.outputs.website_fqdn }}"' \
-          -e "'"$GH_CTX"'"
+          -e "input_website_fqdn=${{ needs.setup.outputs.website_fqdn }}" \
+          -e "@/github-context.json"
 
   deploy-notify:
     name: Deployment Notification
