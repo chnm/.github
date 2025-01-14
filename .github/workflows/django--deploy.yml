@@ -64,7 +64,7 @@ jobs:
     needs: [setup]
     if: ${{ always() && !cancelled() && needs.setup.result == 'success' }}
     steps:
-      - run: echo '{ "github_context": ${{ toJSON(github) }} }' > github-context.json
+      - run: echo "{ \"github_context\": ${{ toJSON(github) }} }" > github-context.json
       - run: cat github-context.json
       - run: |
           run-ansible-playbook.sh playbooks/deploy-docker-compose.yaml \
