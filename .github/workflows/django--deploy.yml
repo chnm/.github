@@ -71,7 +71,7 @@ jobs:
       - run: |
           run-ansible-playbook.sh playbooks/deploy-docker-compose.yaml \
           -e '"input_website_fqdn=${{ needs.setup.outputs.website_fqdn }}"' \
-          -e "@{{ github.workspace }}/github-context.json"
+          -e "@${{ github.workspace }}/github-context.json"
 
   deploy-notify:
     name: Deployment Notification
