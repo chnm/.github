@@ -71,7 +71,7 @@ jobs:
           GITHUB_CONTEXT_PATH: "${{ github.workspace }}/github-context.json"
         run: |
           run-ansible-playbook.sh playbooks/deploy-docker-compose.yaml \
-          -e '"input_website_fqdn=${{ needs.setup.outputs.website_fqdn }}"' \
+          -e "input_website_fqdn=${{ needs.setup.outputs.website_fqdn }}" \
           -e "@/github-context.json"
 
   deploy-notify:
