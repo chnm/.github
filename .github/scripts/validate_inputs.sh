@@ -7,6 +7,8 @@
 # validate website-fqdn input used in hugo build-release-deploy workflow
 if [ -n "$WEBSITE_FQDN" ]; then
   case "$WEBSITE_FQDN" in
+    "data.chnm.org"|\
+    "dev.apiary.rrchnm.org"|\
     "civilwargraffiti.org"|\
     "dev.civilwargraffiti.org"|\
     "connectingthreads.co.uk"|\
