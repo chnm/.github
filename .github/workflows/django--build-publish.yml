@@ -10,7 +10,7 @@ on:
       container-image-name:               # name of container image i.e. github package
         required: true
         type: string
-      django-context-root:                  # root path for hugo build
+      django-context-root:                # root path for django build
         required: true
         type: string
 
