@@ -72,7 +72,7 @@ jobs:
         run: |
           run-ansible-playbook.sh playbooks/deploy-docker-compose.yaml \
           -e "input_website_fqdn=${{ needs.setup.outputs.website_fqdn }}" \
-          -e "@/github-context.json"
+          -e "@/github-context.json" --skip-tags=tag_borg
 
   deploy-notify:
     name: Deployment Notification
