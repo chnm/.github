@@ -138,5 +138,6 @@ jobs:
             commit_sha: ${{ github.sha }}
             commit_message: ${{ github.event.commits[0].message }}
             ```
+            View details at ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           SLACK_USERNAME: rrchnm-systems
           SLACK_WEBHOOK: "${{ secrets.SLACK_WEBHOOK_SYSTEMS }}"
