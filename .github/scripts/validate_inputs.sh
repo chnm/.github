@@ -15,6 +15,7 @@ if [ -n "$WEBSITE_FQDN" ]; then
     "dev.connectingthreads.co.uk"|\
     "dev.connectingthreads.rrchnm.org"|\
     "crdh.rrchnm.org"|\
+    "cyh.rrchnm.org"|\
     "dev.crdh.rrchnm.org"|\
     "datascribe.tech"|\
     "deathbynumbers.org"|\
