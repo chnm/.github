@@ -40,7 +40,7 @@ jobs:
           echo "ref_type: ${{ github.ref_type }}"
           echo "ref: ${{ github.ref }}"
           echo "sha: ${{ github.sha }}"
-  
+
       - name: Set WEBSITE_FQDN devl Env Var as default
         run: echo "WEBSITE_FQDN=${{ inputs.website-devl-fqdn }}" >> $GITHUB_ENV
       - name: Set WEBSITE_FQDN prod Env Var
@@ -57,7 +57,7 @@ jobs:
           WEBSITE_FQDN: "${{ env.WEBSITE_FQDN }}"
 
     outputs:
-      website_fqdn: ${{ env.WEBSITE_FQDN }}    
+      website_fqdn: ${{ env.WEBSITE_FQDN }}
 
   deploy-ansible-playbook:
     runs-on: self-hosted
