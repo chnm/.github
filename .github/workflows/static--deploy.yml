@@ -1,0 +1,90 @@
+name: Static Site Deploy Reusable Workflow
+
+on:
+  workflow_call:
+    inputs:
+      # Deployment Input Vars
+      website-devl-fqdn:                  # fqdn of development website
+        required: true
+        type: string
+      website-prod-fqdn:                  # fqdn of production website
+        required: true
+        type: string
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  WEBSITE_FQDN: ''
+
+jobs:
+
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print GitHub Context Vars
+        run: |
+          echo "run_id: ${{ github.run_id }}"
+          echo "workflow: ${{ github.workflow }}"
+          echo "workflow_ref: ${{ github.workflow_ref }}"
+          echo "workflow_sha: ${{ github.workflow_sha }}"
+          echo "workspace: ${{ github.workspace }}"
+          echo "repository: ${{ github.repository }}"
+          echo "repository_owner: ${{ github.repository_owner }}"
+          echo "event.repository_name: ${{ github.event.repository.name }}"
+          echo "repositoryUrl: ${{ github.repositoryUrl }}"
+          echo "action_ref: ${{ github.action_ref }}"
+          echo "event_name: ${{ github.event_name }}"
+          echo "actor: ${{ github.actor }}"
+          echo "triggering_actor: ${{ github.triggering_actor }}"
+          echo "base_ref: ${{ github.base_ref }}"
+          echo "ref_name: ${{ github.ref_name }}"
+          echo "ref_type: ${{ github.ref_type }}"
+          echo "ref: ${{ github.ref }}"
+          echo "sha: ${{ github.sha }}"
+
+      - name: Set WEBSITE_FQDN devl Env Var as default
+        run: echo "WEBSITE_FQDN=${{ inputs.website-devl-fqdn }}" >> $GITHUB_ENV
+      - name: Set WEBSITE_FQDN prod Env Var
+        if: github.ref == 'refs/heads/main'
+        run: echo "WEBSITE_FQDN=${{ inputs.website-prod-fqdn }}" >> $GITHUB_ENV
+
+      - uses: actions/checkout@v4
+        with:
+          repository: 'chnm/.github'
+          ref: 'main'
+      - name: Run Validate Inputs Script
+        run: ./.github/scripts/validate_inputs.sh
+        env:
+          WEBSITE_FQDN: "${{ env.WEBSITE_FQDN }}"
+
+    outputs:
+      website_fqdn: ${{ env.WEBSITE_FQDN }}
+
+  deploy-ansible-playbook:
+    runs-on: self-hosted
+    needs: [setup]
+    if: ${{ always() && !cancelled() && needs.setup.result == 'success' }}
+    steps:
+      - run: |
+          echo '{ "github_context": ${{ toJSON(github) }} }' > github-context.json
+          cat github-context.json
+      - env:
+          GITHUB_CONTEXT_PATH: "${{ github.workspace }}/github-context.json"
+        run: |
+          run-ansible-playbook.sh playbooks/deploy-static-website.yaml \
+          -e "input_website_fqdn=${{ needs.setup.outputs.website_fqdn }}" \
+          -e "@/github-context.json"
+
+  deploy-notify:
+    name: Deployment Notification
+    needs: deploy-ansible-playbook
+    if: ${{ always() && !cancelled() && (needs.deploy-ansible-playbook.result != 'success') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: rtCamp/action-slack-notify@v2.2.0
+        env:
+          MSG_MINIMAL: true
+          SLACK_COLOR: '#c32a26'
+          SLACK_MESSAGE: "```ref: ${{ github.ref }}\nworkflow_ref: ${{ github.workflow_ref }}```"
+          SLACK_TITLE: 'Deployment Failed - `${{ github.repository }}` Release ${{ needs.release-create.outputs.release_name }}'
+          SLACK_USERNAME: rrchnm-systems
+          SLACK_WEBHOOK: "${{ secrets.SLACK_WEBHOOK_SYSTEMS }}"
