@@ -4,6 +4,9 @@ on:
   workflow_call:
     inputs:
       # Deployment Input Vars
+      context_root:                       # if invoking repo is a monorepo with multiple sites,
+        required: false                   # this will specify the relative dir for deployment
+        type: string
       website-devl-fqdn:                  # fqdn of development website
         required: true
         type: string
@@ -67,7 +70,20 @@ jobs:
       - run: |
           echo '{ "github_context": ${{ toJSON(github) }} }' > github-context.json
           cat github-context.json
-      - env:
+
+      # context root provided
+      - if: ${{ inputs.context_root && inputs.context_root != '' }}
+        env:
+          GITHUB_CONTEXT_PATH: "${{ github.workspace }}/github-context.json"
+        run: |
+          run-ansible-playbook.sh playbooks/deploy-static-website.yaml \
+          -e "input_website_fqdn=${{ needs.setup.outputs.website_fqdn }}" \
+          -e "input_context_root=${{ inputs.context_root }}" \
+          -e "@/github-context.json"
+
+      # context root not provided
+      - if: ${{ !inputs.context_root || inputs.context_root == '' }}
+        env:
           GITHUB_CONTEXT_PATH: "${{ github.workspace }}/github-context.json"
         run: |
           run-ansible-playbook.sh playbooks/deploy-static-website.yaml \
