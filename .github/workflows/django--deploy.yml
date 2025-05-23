@@ -65,7 +65,9 @@ jobs:
     if: ${{ always() && !cancelled() && needs.setup.result == 'success' }}
     steps:
       - run: |
-          echo '{ "github_context": ${{ toJSON(github) }} }' > github-context.json
+          cat <<EOF > github-context.json
+{ "github_context": ${{ toJSON(github) }} }
+EOF
           cat github-context.json
       - env:
           GITHUB_CONTEXT_PATH: "${{ github.workspace }}/github-context.json"
