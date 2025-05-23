@@ -66,8 +66,8 @@ jobs:
     steps:
       - run: |
           cat <<EOF > github-context.json
-{ "github_context": ${{ toJSON(github) }} }
-EOF
+          { "github_context": ${{ toJSON(github) }} }
+          EOF
           cat github-context.json
       - env:
           GITHUB_CONTEXT_PATH: "${{ github.workspace }}/github-context.json"
