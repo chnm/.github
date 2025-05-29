@@ -62,7 +62,9 @@ jobs:
   deploy-ansible-playbook:
     runs-on: self-hosted
     needs: [setup]
-    if: ${{ always() && !cancelled() && needs.setup.result == 'success' }}
+    if: >
+      github.actor != 'dependabot[bot]' &&
+      always() && !cancelled() && needs.setup.result == 'success'
     steps:
       - run: |
           echo '{ "github_context": ${{ toJSON(github) }} }' > github-context.json
@@ -77,7 +79,10 @@ jobs:
   deploy-notify:
     name: Deployment Notification
     needs: deploy-ansible-playbook
-    if: ${{ always() && !cancelled() && (needs.deploy-ansible-playbook.result != 'success') }}
+    if: >
+      github.actor != 'dependabot[bot]' &&
+      always() && !cancelled() &&
+      (needs.deploy-ansible-playbook.result != 'success')
     runs-on: ubuntu-latest
     steps:
       - uses: rtCamp/action-slack-notify@v2.2.0

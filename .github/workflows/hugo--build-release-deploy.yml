@@ -140,6 +140,7 @@ jobs:
             hugobuildargs=--environment production --cleanDestinationDir --minify --baseURL ${{ inputs.hugo-prod-url }}
 
       - name: Extract build artifact from docker image
+        if: github.actor != 'dependabot[bot]'
         uses: shrink/actions-docker-extract@v2
         id: extract
         with:
@@ -151,8 +152,8 @@ jobs:
         run: tar czvf ${{ inputs.build-artifact-name }}.tar.gz -C ${{ steps.extract.outputs.destination }}/html .
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4
         if: github.actor != 'dependabot[bot]'
+        uses: actions/upload-artifact@v4
         with:
           path: "./${{ inputs.build-artifact-name }}.tar.gz"
           name: "${{ inputs.build-artifact-name }}"
