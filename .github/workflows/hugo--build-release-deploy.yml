@@ -147,10 +147,12 @@ jobs:
           path: /usr/share/nginx/html/
 
       - name: Archive build artifact
+        if: github.actor != 'dependabot[bot]'
         run: tar czvf ${{ inputs.build-artifact-name }}.tar.gz -C ${{ steps.extract.outputs.destination }}/html .
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
+        if: github.actor != 'dependabot[bot]'
         with:
           path: "./${{ inputs.build-artifact-name }}.tar.gz"
           name: "${{ inputs.build-artifact-name }}"
@@ -162,7 +164,9 @@ jobs:
   release-iso:
     name: Determine ISO Release Name & Tag
     needs: [build-hugo]
-    if: inputs.release-tag-name-type == 'iso'
+    if: >
+      github.actor != 'dependabot[bot]' &&
+      inputs.release-tag-name-type == 'iso'
     runs-on: ubuntu-latest
     steps:
 
@@ -186,7 +190,9 @@ jobs:
   release-semvar:
     name: Determine SemVar Release Name & Tag
     needs: [build-hugo]
-    if: inputs.release-tag-name-type == 'semvar'
+    if: >
+      github.actor != 'dependabot[bot]' &&
+      inputs.release-tag-name-type == 'semvar'
     runs-on: ubuntu-latest
     steps:
     
@@ -228,7 +234,10 @@ jobs:
   release-create:
     name: Create Release
     needs: [release-semvar, release-iso]
-    if: ${{ always() && !cancelled() && (needs.release-semvar.result == 'success' || needs.release-iso.result == 'success') }}
+    if: >
+      github.actor != 'dependabot[bot]' &&
+      always() && !cancelled() &&
+      (needs.release-semvar.result == 'success' || needs.release-iso.result == 'success')
     runs-on: ubuntu-latest
     steps:
 
@@ -300,7 +309,10 @@ jobs:
   release-notify:
     name: Release Notification
     needs: release-create
-    if: ${{ always() && !cancelled() && needs.release-create.result == 'success' }}
+    if: >
+      github.actor != 'dependabot[bot]' &&
+      always() && !cancelled() &&
+      needs.release-create.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: rtCamp/action-slack-notify@v2.2.0
@@ -328,14 +340,20 @@ jobs:
   deploy-ansible-playbook:
     runs-on: self-hosted
     needs: [setup, release-create]
-    if: ${{ always() && !cancelled() && needs.release-create.result == 'success' }}
+    if: >
+      github.actor != 'dependabot[bot]' &&
+      always() && !cancelled() &&
+      needs.release-create.result == 'success'
     steps:
       - run: run-ansible-playbook.sh playbooks/deploy-ssg-website.yaml -e input_website_fqdn=${{ needs.setup.outputs.website_fqdn }}
 
   deploy-notify:
     name: Deployment Notification
     needs: deploy-ansible-playbook
-    if: ${{ always() && !cancelled() && (needs.deploy-ansible-playbook.result != 'success' || needs.release-create.result != 'success') }}
+    if: >
+      github.actor != 'dependabot[bot]' &&
+      always() && !cancelled() &&
+      (needs.deploy-ansible-playbook.result != 'success' || needs.release-create.result != 'success')
     runs-on: ubuntu-latest
     steps:
       - uses: rtCamp/action-slack-notify@v2.2.0
