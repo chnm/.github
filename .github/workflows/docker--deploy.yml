@@ -63,7 +63,6 @@ jobs:
     runs-on: self-hosted
     needs: [setup]
     if: >
-      github.actor != 'dependabot[bot]' &&
       always() && !cancelled() && needs.setup.result == 'success'
     steps:
       - run: |
@@ -80,7 +79,6 @@ jobs:
     name: Deployment Notification
     needs: deploy-ansible-playbook
     if: >
-      github.actor != 'dependabot[bot]' &&
       always() && !cancelled() &&
       (needs.deploy-ansible-playbook.result != 'success')
     runs-on: ubuntu-latest

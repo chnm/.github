@@ -140,7 +140,6 @@ jobs:
             hugobuildargs=--environment production --cleanDestinationDir --minify --baseURL ${{ inputs.hugo-prod-url }}
 
       - name: Extract build artifact from docker image
-        if: github.actor != 'dependabot[bot]'
         uses: shrink/actions-docker-extract@v2
         id: extract
         with:
@@ -148,11 +147,9 @@ jobs:
           path: /usr/share/nginx/html/
 
       - name: Archive build artifact
-        if: github.actor != 'dependabot[bot]'
         run: tar czvf ${{ inputs.build-artifact-name }}.tar.gz -C ${{ steps.extract.outputs.destination }}/html .
 
       - name: Upload build artifact
-        if: github.actor != 'dependabot[bot]'
         uses: actions/upload-artifact@v4
         with:
           path: "./${{ inputs.build-artifact-name }}.tar.gz"
@@ -166,7 +163,6 @@ jobs:
     name: Determine ISO Release Name & Tag
     needs: [build-hugo]
     if: >
-      github.actor != 'dependabot[bot]' &&
       inputs.release-tag-name-type == 'iso'
     runs-on: ubuntu-latest
     steps:
@@ -192,7 +188,6 @@ jobs:
     name: Determine SemVar Release Name & Tag
     needs: [build-hugo]
     if: >
-      github.actor != 'dependabot[bot]' &&
       inputs.release-tag-name-type == 'semvar'
     runs-on: ubuntu-latest
     steps:
@@ -236,7 +231,6 @@ jobs:
     name: Create Release
     needs: [release-semvar, release-iso]
     if: >
-      github.actor != 'dependabot[bot]' &&
       always() && !cancelled() &&
       (needs.release-semvar.result == 'success' || needs.release-iso.result == 'success')
     runs-on: ubuntu-latest
@@ -311,7 +305,6 @@ jobs:
     name: Release Notification
     needs: release-create
     if: >
-      github.actor != 'dependabot[bot]' &&
       always() && !cancelled() &&
       needs.release-create.result == 'success'
     runs-on: ubuntu-latest
@@ -342,7 +335,6 @@ jobs:
     runs-on: self-hosted
     needs: [setup, release-create]
     if: >
-      github.actor != 'dependabot[bot]' &&
       always() && !cancelled() &&
       needs.release-create.result == 'success'
     steps:
@@ -352,7 +344,6 @@ jobs:
     name: Deployment Notification
     needs: deploy-ansible-playbook
     if: >
-      github.actor != 'dependabot[bot]' &&
       always() && !cancelled() &&
       (needs.deploy-ansible-playbook.result != 'success' || needs.release-create.result != 'success')
     runs-on: ubuntu-latest
