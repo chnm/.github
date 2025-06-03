@@ -336,7 +336,15 @@ jobs:
       always() && !cancelled() &&
       needs.release-create.result == 'success'
     steps:
-      - run: run-ansible-playbook.sh playbooks/deploy-ssg-website.yaml -e input_website_fqdn=${{ needs.setup.outputs.website_fqdn }}
+      - run: |
+          cat <<EOF > github-context.json
+          { "github_context": ${{ toJSON(github) }} }
+          EOF
+          cat github-context.json
+      - run: |
+          run-ansible-playbook.sh playbooks/deploy-ssg-website.yaml \
+          -e input_website_fqdn=${{ needs.setup.outputs.website_fqdn }} \
+          -e "@/github-context.json"
 
   deploy-notify:
     name: Deployment Notification
