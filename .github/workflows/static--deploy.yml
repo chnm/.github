@@ -103,4 +103,4 @@ jobs:
           SLACK_MESSAGE: "```ref: ${{ github.ref }}\nworkflow_ref: ${{ github.workflow_ref }}```"
           SLACK_TITLE: 'Deployment Failed - `${{ github.repository }}` Release ${{ needs.release-create.outputs.release_name }}'
           SLACK_USERNAME: rrchnm-systems
-          SLACK_WEBHOOK: "${{ secrets.SLACK_WEBHOOK_SYSTEMS }}"
+          SLACK_WEBHOOK: "${{ secrets.SLACK_WEBHOOK_SUSTAINABILITY }}"
