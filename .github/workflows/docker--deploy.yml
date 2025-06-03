@@ -89,8 +89,9 @@ jobs:
           SLACK_COLOR: '#c32a26'
           SLACK_MESSAGE: |
             ```
-            ref: ${{ github.ref }}
+            branch: ${{ github.ref_name }}
             workflow_ref: ${{ github.workflow_ref }}
+            commit (${{ github.sha::8 }}): ${{ github.event.commits[0].message }}
             ```
             View details at ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           SLACK_TITLE: 'Deployment Failed - `${{ github.repository }}` Release ${{ needs.release-create.outputs.release_name }}'

@@ -317,11 +317,9 @@ jobs:
           #SLACK_COLOR: '#58a459'
           SLACK_MESSAGE: |
             ```
-            event_name: ${{ github.event_name }}
-            ref: ${{ github.ref }}
+            branch: ${{ github.ref_name }}
             workflow_ref: ${{ github.workflow_ref }}
-            commit_sha: ${{ github.sha }}
-            commit_message: ${{ github.event.commits[0].message }}
+            commit (${{ github.sha::8 }}): ${{ github.event.commits[0].message }}
             ```
           SLACK_TITLE: 'Ready to Deploy :rocket: - `${{ github.repository }}` Release ${{ needs.release-create.outputs.release_name }}'
           SLACK_USERNAME: rrchnm-systems
@@ -354,11 +352,9 @@ jobs:
           SLACK_COLOR: '#c32a26'
           SLACK_MESSAGE: |
             ```
-            event_name: ${{ github.event_name }}
-            ref: ${{ github.ref }}
+            branch: ${{ github.ref_name }}
             workflow_ref: ${{ github.workflow_ref }}
-            commit_sha: ${{ github.sha }}
-            commit_message: ${{ github.event.commits[0].message }}
+            commit (${{ github.sha::8 }}): ${{ github.event.commits[0].message }}
             ```
             View details at ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           SLACK_TITLE: 'Deployment Failed - `${{ github.repository }}` Release ${{ needs.release-create.outputs.release_name }}'
