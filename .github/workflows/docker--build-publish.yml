@@ -134,7 +134,7 @@ jobs:
             ```
             branch: ${{ github.ref_name }}
             workflow_ref: ${{ github.workflow_ref }}
-            commit (${{ github.sha::8 }}): ${{ github.event.commits[0].message }}
+            commit (${{ github.sha }}): ${{ github.event.commits[0].message }}
             ```
             View details at ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           SLACK_USERNAME: rrchnm-systems
