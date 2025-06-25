@@ -8,6 +8,7 @@
 if [ -n "$WEBSITE_FQDN" ]; then
   case "$WEBSITE_FQDN" in
     "1989.rrchnm.org"|\
+    "amboyna.org"|\
     "data.chnm.org"|\
     "dev.apiary.rrchnm.org"|\
     "civilwargraffiti.org"|\
@@ -29,6 +30,7 @@ if [ -n "$WEBSITE_FQDN" ]; then
     "lasfera.rrchnm.org"|\
     "mathhumanists.org"|\
     "dev.outandabout.rrchnm.org"|\
+    "pilbarastrike.org"|\
     "religiousecologies.org"|\
     "dev.religiousecologies.org"|\
     "database.religiousecologies.org"|\
