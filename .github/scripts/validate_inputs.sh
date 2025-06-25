@@ -28,6 +28,7 @@ if [ -n "$WEBSITE_FQDN" ]; then
     "dev.earlymodernviolence.org"|\
     "dev.lasfera.rrchnm.org"|\
     "lasfera.rrchnm.org"|\
+    "maritime-asia.org"|\
     "mathhumanists.org"|\
     "dev.outandabout.rrchnm.org"|\
     "pilbarastrike.org"|\
