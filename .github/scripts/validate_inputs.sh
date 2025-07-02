@@ -24,6 +24,7 @@ if [ -n "$WEBSITE_FQDN" ]; then
     "dev.deathbynumbers.org"|\
     "denigmanuscript.org"|\
     "digitalcampus.tv"|\
+    "dohistory.org"|\
     "earlymodernviolence.org"|\
     "dev.earlymodernviolence.org"|\
     "dev.lasfera.rrchnm.org"|\
@@ -31,6 +32,7 @@ if [ -n "$WEBSITE_FQDN" ]; then
     "maritime-asia.org"|\
     "mathhumanists.org"|\
     "dev.outandabout.rrchnm.org"|\
+    "objectofhistory.org"|\
     "pilbarastrike.org"|\
     "religiousecologies.org"|\
     "dev.religiousecologies.org"|\
