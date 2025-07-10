@@ -39,6 +39,7 @@ if [ -n "$WEBSITE_FQDN" ]; then
     "database.religiousecologies.org"|\
     "dev.database.religiousecologies.org"|\
     "dev.winterthur.rrchnm.org"|\
+    "slack.rrchnm.site"|\
     "static.rrchnm.org"|\
     "test.rrchnm.site"|\
     "devl.rrchnm.site")
