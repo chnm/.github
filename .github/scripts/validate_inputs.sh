@@ -8,6 +8,8 @@
 if [ -n "$WEBSITE_FQDN" ]; then
   case "$WEBSITE_FQDN" in
     "1989.rrchnm.org"|\
+    "911digitalarchive.org"|\
+    "dev.911digitalarchive.org"|\
     "amboyna.org"|\
     "data.chnm.org"|\
     "dev.apiary.rrchnm.org"|\
