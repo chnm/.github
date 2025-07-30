@@ -108,7 +108,7 @@ jobs:
         env:
           MSG_MINIMAL: true
           SLACK_COLOR: '#fab005'
-          SLACK_TITLE: 'Built and Published Package :package: `${{ env.CONTAINER_TAG }}`'
+          SLACK_TITLE: ':whale: Built and Published Package :package: `${{ env.CONTAINER_TAG }}`'
           SLACK_MESSAGE: |
             ```
             event_name: ${{ github.event_name }}
@@ -130,7 +130,7 @@ jobs:
         env:
           MSG_MINIMAL: true
           SLACK_COLOR: '#c32a26'
-          SLACK_TITLE: 'Build or Publish Package Failure :x: `${{ env.CONTAINER_TAG }}`'
+          SLACK_TITLE: ':whale: Build or Publish Package Failure :x: `${{ env.CONTAINER_TAG }}`'
           SLACK_MESSAGE: |
             ```
             branch: ${{ github.ref_name }}
