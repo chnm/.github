@@ -341,7 +341,9 @@ jobs:
           { "github_context": ${{ toJSON(github) }} }
           EOF
           cat github-context.json
-      - run: |
+      - env:
+          GITHUB_CONTEXT_PATH: "${{ github.workspace }}/github-context.json"
+        run: |
           run-ansible-playbook.sh playbooks/deploy-ssg-website.yaml \
           -e input_website_fqdn=${{ needs.setup.outputs.website_fqdn }} \
           -e "@/github-context.json"
