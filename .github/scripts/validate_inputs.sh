@@ -26,6 +26,7 @@ if [ -n "$WEBSITE_FQDN" ]; then
     "dev.deathbynumbers.org"|\
     "denigmanuscript.org"|\
     "digitalcampus.tv"|\
+    "dissdb.dev.rrchnm.org"|\
     "dohistory.org"|\
     "earlymodernviolence.org"|\
     "dev.earlymodernviolence.org"|\
