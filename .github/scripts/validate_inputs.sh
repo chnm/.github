@@ -35,6 +35,7 @@ if [ -n "$WEBSITE_FQDN" ]; then
     "maritime-asia.org"|\
     "mathhumanists.org"|\
     "dev.outandabout.rrchnm.org"|\
+    "outandaboutnova.org"|\
     "objectofhistory.org"|\
     "pilbarastrike.org"|\
     "religiousecologies.org"|\
