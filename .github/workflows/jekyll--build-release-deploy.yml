@@ -126,6 +126,7 @@ jobs:
           tags: "${{ env.CONTAINER_TAG }}"
           platforms: linux/amd64
           build-args: |
+            environment=development
             configfile=_config-dev.yml
 
       - name: Build Docker Image (prod)
@@ -137,6 +138,7 @@ jobs:
           tags: "${{ env.CONTAINER_TAG }}"
           platforms: linux/amd64
           build-args: |
+            environment=production
             configfile=_config-production.yml
 
       - name: Extract build artifact from docker image
