@@ -33,6 +33,7 @@ if [ -n "$WEBSITE_FQDN" ]; then
     "dev.earlymodernviolence.org"|\
     "dev.lasfera.rrchnm.org"|\
     "lasfera.rrchnm.org"|\
+    "mappingpinkertons.rrchnm.org"|\
     "maritime-asia.org"|\
     "mathhumanists.org"|\
     "dev.outandabout.rrchnm.org"|\
