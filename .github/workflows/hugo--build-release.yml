@@ -1,0 +1,326 @@
+name: Hugo Build, Release, and Deploy Reusable Workflow
+
+on:
+  workflow_call:
+    inputs:
+      # Build Input Vars
+      container-registry:                 # container registry e.g. ghcr.io
+        required: true
+        type: string
+      container-image-name:               # name of container image i.e. github package
+        required: true
+        type: string
+      hugo-context-root:                  # root path for hugo build
+        required: true
+        type: string
+      hugo-devl-url:                      # hugo development url
+        required: true
+        type: string
+      hugo-prod-url:                      # hugo production url
+        required: true
+        type: string
+
+      # Release Input Vars
+      build-artifact-name:                # name of build artifact to transfer between jobs/workflows
+        required: true
+        type: string
+      release-tag-name-type:              # semvar | iso
+        required: true
+        type: string
+
+      # Deployment Input Vars
+      website-devl-fqdn:                  # fqdn of development website
+        required: true
+        type: string
+      website-prod-fqdn:                  # fqdn of production website
+        required: true
+        type: string
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  CONTAINER_TAG: "${{ inputs.container-registry }}/chnm/${{ inputs.container-image-name }}:latest"
+  RELEASE_NAME: ''
+  RELEASE_TAG_NAME: ''
+  WEBSITE_FQDN: ''
+
+jobs:
+
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print GitHub Context Vars
+        run: |
+          echo "run_id: ${{ github.run_id }}"
+          echo "workflow: ${{ github.workflow }}"
+          echo "workflow_ref: ${{ github.workflow_ref }}"
+          echo "workflow_sha: ${{ github.workflow_sha }}"
+          echo "workspace: ${{ github.workspace }}"
+          echo "repository: ${{ github.repository }}"
+          echo "repository_owner: ${{ github.repository_owner }}"
+          echo "event.repository_name: ${{ github.event.repository.name }}"
+          echo "repositoryUrl: ${{ github.repositoryUrl }}"
+          echo "action_ref: ${{ github.action_ref }}"
+          echo "event_name: ${{ github.event_name }}"
+          echo "actor: ${{ github.actor }}"
+          echo "triggering_actor: ${{ github.triggering_actor }}"
+          echo "base_ref: ${{ github.base_ref }}"
+          echo "ref_name: ${{ github.ref_name }}"
+          echo "ref_type: ${{ github.ref_type }}"
+          echo "ref: ${{ github.ref }}"
+          echo "sha: ${{ github.sha }}"
+  
+      - name: Set WEBSITE_FQDN devl Env Var
+        if: github.ref == 'refs/heads/preview'
+        run: echo "WEBSITE_FQDN=${{ inputs.website-devl-fqdn }}" >> $GITHUB_ENV
+      - name: Set WEBSITE_FQDN prod Env Var
+        if: github.ref == 'refs/heads/main'
+        run: echo "WEBSITE_FQDN=${{ inputs.website-prod-fqdn }}" >> $GITHUB_ENV
+
+      - uses: actions/checkout@v4
+        with:
+          repository: 'chnm/.github'
+          ref: 'main'
+      - name: Run Validate Inputs Script
+        run: ./.github/scripts/validate_inputs.sh
+        env:
+          WEBSITE_FQDN: "${{ env.WEBSITE_FQDN }}"
+
+    outputs:
+      website_fqdn: ${{ env.WEBSITE_FQDN }}    
+
+#################
+###   BUILD   ###
+#################  
+
+  build-hugo:
+    runs-on: ubuntu-latest
+    needs: setup
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: '${{ github.repository }}'   # the invoking repository
+      
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          username: ${{ github.repository_owner }}
+          password: ${{ env.GITHUB_TOKEN }}
+          registry: ${{ inputs.container-registry }}
+
+      - name: Build and Push Docker Image for Local Dev
+        uses: docker/build-push-action@v4
+        with:
+          context: "${{ inputs.hugo-context-root }}"
+          push: true
+          tags: "${{ env.CONTAINER_TAG }}"
+          platforms: linux/amd64
+
+      - name: Build Docker Image (devl)
+        if: github.ref == 'refs/heads/preview'
+        uses: docker/build-push-action@v4
+        with:
+          context: "${{ inputs.hugo-context-root }}"
+          push: false
+          tags: "${{ env.CONTAINER_TAG }}"
+          platforms: linux/amd64
+          build-args: |
+            hugobuildargs=--environment development --cleanDestinationDir --buildDrafts --buildFuture --baseURL ${{ inputs.hugo-devl-url }}
+
+      - name: Build Docker Image (prod)
+        if: github.ref == 'refs/heads/main'
+        uses: docker/build-push-action@v4
+        with:
+          context: "${{ inputs.hugo-context-root }}"
+          push: false
+          tags: "${{ env.CONTAINER_TAG }}"
+          platforms: linux/amd64
+          build-args: |
+            hugobuildargs=--environment production --cleanDestinationDir --minify --baseURL ${{ inputs.hugo-prod-url }}
+
+      - name: Extract build artifact from docker image
+        uses: shrink/actions-docker-extract@v2
+        id: extract
+        with:
+          image: "${{ env.CONTAINER_TAG }}"
+          path: /usr/share/nginx/html/
+
+      - name: Archive build artifact
+        run: tar czvf ${{ inputs.build-artifact-name }}.tar.gz -C ${{ steps.extract.outputs.destination }}/html .
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: "./${{ inputs.build-artifact-name }}.tar.gz"
+          name: "${{ inputs.build-artifact-name }}"
+
+###################
+###   RELEASE   ###
+###################
+
+  release-iso:
+    name: Determine ISO Release Name & Tag
+    needs: [build-hugo]
+    if: >
+      inputs.release-tag-name-type == 'iso'
+    runs-on: ubuntu-latest
+    steps:
+
+      - id: build_timestamp
+        name: Get build timestamp
+        run: echo "ts=$(TZ=America/New_York date +'%Y-%m-%dT%H:%M:%S%z')" >> $GITHUB_OUTPUT
+
+      - id: build_timestamp_for_tag
+        name: Get build timestamp for tag
+        run: echo "ts=$(TZ=America/New_York date +'%Y%m%d_%H%M%S')" >> $GITHUB_OUTPUT
+
+      - name: Set RELEASE_NAME env
+        run: echo "RELEASE_NAME=${{ steps.build_timestamp.outputs.ts }}" >> $GITHUB_ENV
+      - name: Set RELEASE_TAG_NAME env
+        run: echo "RELEASE_TAG_NAME=${{ steps.build_timestamp_for_tag.outputs.ts }}" >> $GITHUB_ENV
+
+    outputs:
+      release_name: ${{ env.RELEASE_NAME }}    
+      release_tag_name: ${{ env.RELEASE_TAG_NAME }}    
+  
+  release-semvar:
+    name: Determine SemVar Release Name & Tag
+    needs: [build-hugo]
+    if: >
+      inputs.release-tag-name-type == 'semvar'
+    runs-on: ubuntu-latest
+    steps:
+    
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          repository: "${{ github.repository }}"
+          fetch-depth: 0 # required for github-action-get-previous-tag
+
+      - id: previoustag
+        name: Get previous tag
+        uses: 'WyriHaximus/github-action-get-previous-tag@v1'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          fallback: 0.0.9
+          prefix: v
+
+      - id: semver
+        name: Get next minor version
+        uses: 'WyriHaximus/github-action-next-semvers@v1'
+        with:
+          version: ${{ steps.previoustag.outputs.tag }}
+
+      - name: Set RELEASE_NAME & RELEASE_TAG_NAME env
+        run: |
+          echo "RELEASE_NAME=${{ steps.semver.outputs.v_patch }}" >> $GITHUB_ENV
+          echo "RELEASE_TAG_NAME=${{ steps.semver.outputs.v_patch }}" >> $GITHUB_ENV
+      - name: Set RELEASE_NAME & RELEASE_TAG_NAME env
+        if: steps.semver.outputs.tag == '0.9.0'
+        run: |
+          echo "RELEASE_NAME=${{ steps.semver.outputs.v_minor }}" >> $GITHUB_ENV
+          echo "RELEASE_TAG_NAME=${{ steps.semver.outputs.v_minor }}" >> $GITHUB_ENV
+
+    outputs:
+      release_name: ${{ env.RELEASE_NAME }}    
+      release_tag_name: ${{ env.RELEASE_TAG_NAME }}    
+ 
+  release-create:
+    name: Create Release
+    needs: [release-semvar, release-iso]
+    if: >
+      always() && !cancelled() &&
+      (needs.release-semvar.result == 'success' || needs.release-iso.result == 'success')
+    runs-on: ubuntu-latest
+    steps:
+
+      - if: inputs.release-tag-name-type == 'iso'
+        run: |
+          echo "RELEASE_NAME=${{ needs.release-iso.outputs.release_name }}" >> $GITHUB_ENV
+          echo "RELEASE_TAG_NAME=${{ needs.release-iso.outputs.release_tag_name }}" >> $GITHUB_ENV
+      - if: inputs.release-tag-name-type == 'semvar'
+        run: |
+          echo "RELEASE_NAME=${{ needs.release-semvar.outputs.release_name }}" >> $GITHUB_ENV
+          echo "RELEASE_TAG_NAME=${{ needs.release-semvar.outputs.release_tag_name }}" >> $GITHUB_ENV
+
+      - name: Transfer build artifact to this workspace
+        uses: actions/download-artifact@v4
+        with:
+          name: "${{ inputs.build-artifact-name }}"
+          path: .
+      - run: ls -l
+
+      - name: Generate RELEASE.md
+        run: |
+          echo '`github` context:' > RELEASE.md
+          echo '```' >> RELEASE.md
+          echo "run_id: ${{ github.run_id }}" >> RELEASE.md
+          echo "workflow: ${{ github.workflow }}" >> RELEASE.md
+          echo "workflow_ref: ${{ github.workflow_ref }}" >> RELEASE.md
+          echo "workflow_sha: ${{ github.workflow_sha }}" >> RELEASE.md
+          echo "workspace: ${{ github.workspace }}" >> RELEASE.md
+          echo "repository: ${{ github.repository }}" >> RELEASE.md
+          echo "repository_owner: ${{ github.repository_owner }}" >> RELEASE.md
+          echo "repository_name: ${{ github.event.repository.name }}" >> RELEASE.md
+          echo "repositoryUrl: ${{ github.repositoryUrl }}" >> RELEASE.md
+          echo "action_ref: ${{ github.action_ref }}" >> RELEASE.md
+          echo "event_name: ${{ github.event_name }}" >> RELEASE.md
+          echo "actor: ${{ github.actor }}" >> RELEASE.md
+          echo "triggering_actor: ${{ github.triggering_actor }}" >> RELEASE.md
+          echo "base_ref: ${{ github.base_ref }}" >> RELEASE.md
+          echo "ref_name: ${{ github.ref_name }}" >> RELEASE.md
+          echo "ref_type: ${{ github.ref_type }}" >> RELEASE.md
+          echo "ref: ${{ github.ref }}" >> RELEASE.md
+          echo "sha: ${{ github.sha }}" >> RELEASE.md
+          echo '```' >> RELEASE.md
+
+      - id: create_release
+        name: Create semvar release
+        uses: actions/create-release@v1.1.4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          owner: "${{ github.repository_owner }}"
+          repo: "${{ github.repository_name }}"
+          release_name: ${{ env.RELEASE_NAME }}
+          tag_name: ${{ env.RELEASE_TAG_NAME }}
+          body_path: "./RELEASE.md" 
+    
+      - id: upload-release-asset
+        name: Upload Release Tarball Asset
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: "./${{ inputs.build-artifact-name }}.tar.gz"
+          asset_name: "${{ inputs.build-artifact-name }}.tar.gz"
+          asset_content_type: application/tar+gzip
+    outputs:
+      release_name: ${{ env.RELEASE_NAME }}
+
+  release-notify:
+    name: Release Notification
+    needs: release-create
+    if: >
+      always() && !cancelled() &&
+      needs.release-create.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: rtCamp/action-slack-notify@v2.2.0
+        env:
+          MSG_MINIMAL: true
+          #SLACK_COLOR: '#c32a26'
+          SLACK_COLOR: '#fab005'
+          #SLACK_COLOR: '#58a459'
+          SLACK_MESSAGE: |
+            ```
+            branch: ${{ github.ref_name }}
+            workflow_ref: ${{ github.workflow_ref }}
+            commit (${{ github.sha }}): ${{ github.event.commits[0].message }}
+            ```
+          SLACK_TITLE: 'Ready to Deploy :rocket: - `${{ github.repository }}` Release ${{ needs.release-create.outputs.release_name }}'
+          SLACK_USERNAME: rrchnm-systems
+          SLACK_WEBHOOK: "${{ secrets.SLACK_WEBHOOK_SYSTEMS }}"
