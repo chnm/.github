@@ -69,8 +69,7 @@ jobs:
           echo "ref: ${{ github.ref }}"
           echo "sha: ${{ github.sha }}"
   
-      - name: Set WEBSITE_FQDN devl Env Var
-        if: github.ref == 'refs/heads/preview'
+      - name: Set WEBSITE_FQDN devl Env Var as default
         run: echo "WEBSITE_FQDN=${{ inputs.website-devl-fqdn }}" >> $GITHUB_ENV
       - name: Set WEBSITE_FQDN prod Env Var
         if: github.ref == 'refs/heads/main'
