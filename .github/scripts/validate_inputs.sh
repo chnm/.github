@@ -34,7 +34,7 @@ if [ -n "$WEBSITE_FQDN" ]; then
     "dev.lasfera.rrchnm.org"|\
     "lasfera.rrchnm.org"|\
     "legalmodernism.org"|\
-    "legalmodernism.rrchnm.site"|\
+    "chambers.legalmodernism.org"|\
     "mappingpinkertons.rrchnm.org"|\
     "maritime-asia.org"|\
     "mathhumanists.org"|\
