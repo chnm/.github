@@ -323,6 +323,7 @@ jobs:
             workflow_ref: ${{ github.workflow_ref }}
             commit (${{ github.sha }}): ${{ github.event.commits[0].message }}
             ```
+            View details at ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           SLACK_TITLE: 'Ready to Deploy :rocket: - `${{ github.repository }}` Release ${{ needs.release-create.outputs.release_name }}'
           SLACK_USERNAME: rrchnm-systems
           SLACK_WEBHOOK: "${{ secrets.SLACK_WEBHOOK_SYSTEMS }}"
