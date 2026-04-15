@@ -14,6 +14,7 @@ if [ -n "$WEBSITE_FQDN" ]; then
     "data.chnm.org"|\
     "dev.apiary.rrchnm.org"|\
     "dev.workspace.apiary.rrchnm.org"|\
+    "hugo.chnm.gmu.edu"|\
     "civilwargraffiti.org"|\
     "dev.civilwargraffiti.org"|\
     "connectingthreads.co.uk"|\
