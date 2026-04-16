@@ -100,12 +100,13 @@ jobs:
     needs: setup
     permissions:
       packages: write
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
           repository: '${{ github.repository }}'   # the invoking repository
           submodules: 'true'
+          fetch-depth: 0   # required for github-action-get-previous-tag (semvar)
           token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Login to GitHub Container Registry
@@ -157,57 +158,28 @@ jobs:
           SUBDIR=$(basename "${{ inputs.hugo-content-path }}")
           tar czvf ${{ inputs.build-artifact-name }}.tar.gz -C ${{ steps.extract.outputs.destination }}/"$SUBDIR" .
 
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          path: "./${{ inputs.build-artifact-name }}.tar.gz"
-          name: "${{ inputs.build-artifact-name }}"
-          retention-days: 2
-
 ###################
 ###   RELEASE   ###
 ###################
 
-  release-iso:
-    name: Determine ISO Release Name & Tag
-    needs: [build-hugo]
-    if: >
-      inputs.release-tag-name-type == 'iso'
-    runs-on: ubuntu-latest
-    steps:
-
       - id: build_timestamp
+        if: inputs.release-tag-name-type == 'iso'
         name: Get build timestamp
         run: echo "ts=$(TZ=America/New_York date +'%Y-%m-%dT%H:%M:%S%z')" >> $GITHUB_OUTPUT
 
       - id: build_timestamp_for_tag
+        if: inputs.release-tag-name-type == 'iso'
         name: Get build timestamp for tag
         run: echo "ts=$(TZ=America/New_York date +'%Y%m%d_%H%M%S')" >> $GITHUB_OUTPUT
 
-      - name: Set RELEASE_NAME env
-        run: echo "RELEASE_NAME=${{ steps.build_timestamp.outputs.ts }}" >> $GITHUB_ENV
-      - name: Set RELEASE_TAG_NAME env
-        run: echo "RELEASE_TAG_NAME=${{ steps.build_timestamp_for_tag.outputs.ts }}" >> $GITHUB_ENV
-
-    outputs:
-      release_name: ${{ env.RELEASE_NAME }}    
-      release_tag_name: ${{ env.RELEASE_TAG_NAME }}    
-  
-  release-semvar:
-    name: Determine SemVar Release Name & Tag
-    needs: [build-hugo]
-    if: >
-      inputs.release-tag-name-type == 'semvar'
-    runs-on: ubuntu-latest
-    steps:
-    
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          repository: "${{ github.repository }}"
-          fetch-depth: 0 # required for github-action-get-previous-tag
+      - if: inputs.release-tag-name-type == 'iso'
+        name: Set RELEASE_NAME / RELEASE_TAG_NAME env (iso)
+        run: |
+          echo "RELEASE_NAME=${{ steps.build_timestamp.outputs.ts }}" >> $GITHUB_ENV
+          echo "RELEASE_TAG_NAME=${{ steps.build_timestamp_for_tag.outputs.ts }}" >> $GITHUB_ENV
 
       - id: previoustag
+        if: inputs.release-tag-name-type == 'semvar'
         name: Get previous tag
         uses: 'WyriHaximus/github-action-get-previous-tag@v1'
         env:
@@ -217,49 +189,22 @@ jobs:
           prefix: v
 
       - id: semver
+        if: inputs.release-tag-name-type == 'semvar'
         name: Get next minor version
         uses: 'WyriHaximus/github-action-next-semvers@v1'
         with:
           version: ${{ steps.previoustag.outputs.tag }}
 
-      - name: Set RELEASE_NAME & RELEASE_TAG_NAME env
+      - if: inputs.release-tag-name-type == 'semvar'
+        name: Set RELEASE_NAME / RELEASE_TAG_NAME env (semvar)
         run: |
           echo "RELEASE_NAME=${{ steps.semver.outputs.v_patch }}" >> $GITHUB_ENV
           echo "RELEASE_TAG_NAME=${{ steps.semver.outputs.v_patch }}" >> $GITHUB_ENV
-      - name: Set RELEASE_NAME & RELEASE_TAG_NAME env
-        if: steps.semver.outputs.tag == '0.9.0'
+      - if: inputs.release-tag-name-type == 'semvar' && steps.semver.outputs.tag == '0.9.0'
+        name: Set RELEASE_NAME / RELEASE_TAG_NAME env (semvar bootstrap)
         run: |
           echo "RELEASE_NAME=${{ steps.semver.outputs.v_minor }}" >> $GITHUB_ENV
           echo "RELEASE_TAG_NAME=${{ steps.semver.outputs.v_minor }}" >> $GITHUB_ENV
-
-    outputs:
-      release_name: ${{ env.RELEASE_NAME }}    
-      release_tag_name: ${{ env.RELEASE_TAG_NAME }}    
- 
-  release-create:
-    name: Create Release
-    needs: [release-semvar, release-iso]
-    if: >
-      always() && !cancelled() &&
-      (needs.release-semvar.result == 'success' || needs.release-iso.result == 'success')
-    runs-on: ubuntu-latest
-    steps:
-
-      - if: inputs.release-tag-name-type == 'iso'
-        run: |
-          echo "RELEASE_NAME=${{ needs.release-iso.outputs.release_name }}" >> $GITHUB_ENV
-          echo "RELEASE_TAG_NAME=${{ needs.release-iso.outputs.release_tag_name }}" >> $GITHUB_ENV
-      - if: inputs.release-tag-name-type == 'semvar'
-        run: |
-          echo "RELEASE_NAME=${{ needs.release-semvar.outputs.release_name }}" >> $GITHUB_ENV
-          echo "RELEASE_TAG_NAME=${{ needs.release-semvar.outputs.release_tag_name }}" >> $GITHUB_ENV
-
-      - name: Transfer build artifact to this workspace
-        uses: actions/download-artifact@v4
-        with:
-          name: "${{ inputs.build-artifact-name }}"
-          path: .
-      - run: ls -l
 
       - name: Generate RELEASE.md
         run: |
@@ -286,7 +231,7 @@ jobs:
           echo '```' >> RELEASE.md
 
       - id: create_release
-        name: Create semvar release
+        name: Create release
         uses: actions/create-release@v1.1.4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -295,8 +240,8 @@ jobs:
           repo: "${{ github.repository_name }}"
           release_name: ${{ env.RELEASE_NAME }}
           tag_name: ${{ env.RELEASE_TAG_NAME }}
-          body_path: "./RELEASE.md" 
-    
+          body_path: "./RELEASE.md"
+
       - id: upload-release-asset
         name: Upload Release Tarball Asset
         uses: actions/upload-release-asset@v1.0.2
@@ -307,15 +252,16 @@ jobs:
           asset_path: "./${{ inputs.build-artifact-name }}.tar.gz"
           asset_name: "${{ inputs.build-artifact-name }}.tar.gz"
           asset_content_type: application/tar+gzip
+
     outputs:
       release_name: ${{ env.RELEASE_NAME }}
 
   release-notify:
     name: Release Notification
-    needs: release-create
+    needs: build-hugo
     if: >
       always() && !cancelled() &&
-      needs.release-create.result == 'success'
+      needs.build-hugo.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: rtCamp/action-slack-notify@v2.2.0
@@ -331,6 +277,6 @@ jobs:
             commit (${{ github.sha }}): ${{ github.event.commits[0].message }}
             ```
             View details at ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          SLACK_TITLE: 'Ready to Deploy :rocket: - `${{ github.repository }}` Release ${{ needs.release-create.outputs.release_name }}'
+          SLACK_TITLE: 'Ready to Deploy :rocket: - `${{ github.repository }}` Release ${{ needs.build-hugo.outputs.release_name }}'
           SLACK_USERNAME: rrchnm-systems
           SLACK_WEBHOOK: "${{ secrets.SLACK_WEBHOOK_SYSTEMS }}"
