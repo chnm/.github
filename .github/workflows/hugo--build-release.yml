@@ -19,6 +19,10 @@ on:
       hugo-prod-url:                      # hugo production url
         required: true
         type: string
+      hugo-content-path:                  # path to built content in container; defaults to nginx html dir
+        required: false
+        type: string
+        default: /usr/share/nginx/html/
 
       # Release Input Vars
       build-artifact-name:                # name of build artifact to transfer between jobs/workflows
@@ -141,28 +145,17 @@ jobs:
           build-args: |
             hugobuildargs=--environment production --cleanDestinationDir --minify --baseURL ${{ inputs.hugo-prod-url }}
 
-      - name: Detect content path
-        id: detect
-        run: |
-          docker pull "${{ env.CONTAINER_TAG }}"
-          if docker run --rm --entrypoint sh "${{ env.CONTAINER_TAG }}" -c '[ -d /usr/share/nginx/html ] && ls -A /usr/share/nginx/html | grep -q .'; then
-            echo "path=/usr/share/nginx/html/" >> $GITHUB_OUTPUT
-          elif docker run --rm --entrypoint sh "${{ env.CONTAINER_TAG }}" -c '[ -d /srv ] && ls -A /srv | grep -q .'; then
-            echo "path=/srv" >> $GITHUB_OUTPUT
-          else
-            echo "No content directory found" >&2
-            exit 1
-          fi
-      
       - name: Extract build artifact
         uses: shrink/actions-docker-extract@v2
         id: extract
         with:
           image: "${{ env.CONTAINER_TAG }}"
-          path: ${{ steps.detect.outputs.path }}
+          path: ${{ inputs.hugo-content-path }}
 
       - name: Archive build artifact
-        run: tar czvf ${{ inputs.build-artifact-name }}.tar.gz -C ${{ steps.extract.outputs.destination }}/html .
+        run: |
+          SUBDIR=$(basename "${{ inputs.hugo-content-path }}")
+          tar czvf ${{ inputs.build-artifact-name }}.tar.gz -C ${{ steps.extract.outputs.destination }}/"$SUBDIR" .
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
