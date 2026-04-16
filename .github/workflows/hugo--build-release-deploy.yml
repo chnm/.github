@@ -138,12 +138,25 @@ jobs:
           build-args: |
             hugobuildargs=--environment production --cleanDestinationDir --minify --baseURL ${{ inputs.hugo-prod-url }}
 
-      - name: Extract build artifact from docker image
+      - name: Detect content path
+        id: detect
+        run: |
+          docker pull "${{ env.CONTAINER_TAG }}"
+          if docker run --rm --entrypoint sh "${{ env.CONTAINER_TAG }}" -c '[ -d /usr/share/nginx/html ] && ls -A /usr/share/nginx/html | grep -q .'; then
+            echo "path=/usr/share/nginx/html/" >> $GITHUB_OUTPUT
+          elif docker run --rm --entrypoint sh "${{ env.CONTAINER_TAG }}" -c '[ -d /srv ] && ls -A /srv | grep -q .'; then
+            echo "path=/srv" >> $GITHUB_OUTPUT
+          else
+            echo "No content directory found" >&2
+            exit 1
+          fi
+      
+      - name: Extract build artifact
         uses: shrink/actions-docker-extract@v2
         id: extract
         with:
           image: "${{ env.CONTAINER_TAG }}"
-          path: /usr/share/nginx/html/
+          path: ${{ steps.detect.outputs.path }}
 
       - name: Archive build artifact
         run: tar czvf ${{ inputs.build-artifact-name }}.tar.gz -C ${{ steps.extract.outputs.destination }}/html .
