@@ -159,7 +159,7 @@ jobs:
         with:
           path: "./${{ inputs.build-artifact-name }}.tar.gz"
           name: "${{ inputs.build-artifact-name }}"
-          retention-days: 9
+          retention-days: 2
 
 ###################
 ###   RELEASE   ###
