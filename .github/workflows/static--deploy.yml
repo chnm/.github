@@ -67,10 +67,10 @@ jobs:
     needs: [setup]
     if: ${{ always() && !cancelled() && needs.setup.result == 'success' }}
     steps:
-      - run: |
-          cat <<EOF > github-context.json
-          { "github_context": ${{ toJSON(github) }} }
-          EOF
+      - env:
+          GITHUB_CONTEXT: ${{ toJSON(github) }}
+        run: |
+          python3 -c 'import json,os,sys; json.dump({"github_context": json.loads(os.environ["GITHUB_CONTEXT"])}, sys.stdout)' > github-context.json
           cat github-context.json
 
       # context root provided
