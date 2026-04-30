@@ -16,6 +16,7 @@ if [ -n "$WEBSITE_FQDN" ]; then
     "911.dev.chnm.gmu.edu"|\
     "futl.dev.chnm.gmu.edu"|\
     "occupyarchive.dev.chnm.gmu.edu"|\
+    "resounding.dev.chnm.gmu.edu"|\
     "hugo.chnm.gmu.edu"|\
     "civilwargraffiti.org"|\
     "dev.civilwargraffiti.org"|\
@@ -34,6 +35,7 @@ if [ -n "$WEBSITE_FQDN" ]; then
     "dohistory.org"|\
     "earlymodernviolence.org"|\
     "dev.earlymodernviolence.org"|\
+    "forustheliving.org"|\
     "dev.lasfera.rrchnm.org"|\
     "lasfera.rrchnm.org"|\
     "legalmodernism.org"|\
@@ -44,6 +46,7 @@ if [ -n "$WEBSITE_FQDN" ]; then
     "dev.outandabout.rrchnm.org"|\
     "outandaboutnova.org"|\
     "objectofhistory.org"|\
+    "occupyarchive.org"|\
     "pilbarastrike.org"|\
     "religiousecologies.org"|\
     "dev.religiousecologies.org"|\
