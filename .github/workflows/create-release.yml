@@ -221,27 +221,15 @@ jobs:
           echo '```' >> RELEASE.md
 
       - id: create_release
-        name: Create semvar release
-        uses: actions/create-release@v1.1.4
+        name: Create semvar release and upload tarball
+        uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          owner: "${{ inputs.github-repository-owner }}"
-          repo: "${{ inputs.github-repository-name }}"
-          release_name: ${{ env.RELEASE_NAME }}
           tag_name: ${{ env.RELEASE_TAG_NAME }}
-          body_path: "./RELEASE.md" 
-    
-      - id: upload-release-asset
-        name: Upload Release Tarball Asset
-        uses: actions/upload-release-asset@v1.0.2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: "./${{ inputs.release-artifact-tarball-filename }}"
-          asset_name: "${{ inputs.release-artifact-tarball-filename }}"
-          asset_content_type: application/tar+gzip
+          name: ${{ env.RELEASE_NAME }}
+          body_path: ./RELEASE.md
+          files: "./${{ inputs.release-artifact-tarball-filename }}"
     outputs:
       release_name: ${{ env.RELEASE_NAME }}
 
