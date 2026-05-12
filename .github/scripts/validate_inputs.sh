@@ -36,6 +36,7 @@ if [ -n "$WEBSITE_FQDN" ]; then
     "earlymodernviolence.org"|\
     "dev.earlymodernviolence.org"|\
     "forustheliving.org"|\
+    "historymatters.gmu.edu"|\
     "dev.lasfera.rrchnm.org"|\
     "lasfera.rrchnm.org"|\
     "legalmodernism.org"|\
