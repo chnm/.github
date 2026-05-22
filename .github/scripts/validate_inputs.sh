@@ -33,6 +33,8 @@ if [ -n "$WEBSITE_FQDN" ]; then
     "digitalcampus.tv"|\
     "dissdb.dev.rrchnm.org"|\
     "dohistory.org"|\
+    "eec.dev.chnm.gmu.edu"|\
+    "eagleeyecitizen.org"|\
     "earlymodernviolence.org"|\
     "dev.earlymodernviolence.org"|\
     "forustheliving.org"|\
