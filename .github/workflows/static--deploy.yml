@@ -85,8 +85,12 @@ jobs:
       # ansible/vars/static-sites.yaml keyed off target_fqdn. context_root
       # is not passed (the catalog already knows each FQDN's subdir);
       # github-context.json IS passed so the playbook's Slack notification
-      # can attribute the deploy to a commit / branch / actor.
+      # can attribute the deploy to a commit / branch / actor. GITHUB_CONTEXT_PATH
+      # tells run-ansible-playbook.sh to bind-mount the host file in as
+      # /github-context.json inside the inner ansible container.
       - if: ${{ contains(inputs.runner_labels, 'IncusOS') }}
+        env:
+          GITHUB_CONTEXT_PATH: "${{ github.workspace }}/github-context.json"
         run: |
           run-ansible-playbook.sh playbooks/deploy-static-sites.yaml \
           -e "target_fqdn=${{ needs.setup.outputs.website_fqdn }}" \
