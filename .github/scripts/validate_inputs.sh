@@ -33,9 +33,12 @@ if [ -n "$WEBSITE_FQDN" ]; then
     "digitalcampus.tv"|\
     "dissdb.dev.rrchnm.org"|\
     "dohistory.org"|\
+    "eec.dev.chnm.gmu.edu"|\
+    "eagleeyecitizen.org"|\
     "earlymodernviolence.org"|\
     "dev.earlymodernviolence.org"|\
     "forustheliving.org"|\
+    "historymatters.gmu.edu"|\
     "dev.lasfera.rrchnm.org"|\
     "lasfera.rrchnm.org"|\
     "legalmodernism.org"|\
@@ -52,6 +55,7 @@ if [ -n "$WEBSITE_FQDN" ]; then
     "dev.religiousecologies.org"|\
     "database.religiousecologies.org"|\
     "dev.database.religiousecologies.org"|\
+    "rrchnm.org"|\
     "hugo.rrchnm.org"|\
     "sustainabledh.org"|\
     "dev.teachinghistory.org"|\
