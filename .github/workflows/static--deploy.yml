@@ -71,24 +71,26 @@ jobs:
     needs: [setup]
     if: ${{ always() && !cancelled() && needs.setup.result == 'success' }}
     steps:
-      # Legacy XCP-ng path: serialize the github context for the legacy
-      # playbook's Slack-notification step. Skipped on IncusOS — levi's
-      # inner ansible container has no python3 on PATH, and the new
-      # deploy-static-sites.yaml doesn't consume the file.
-      - if: ${{ !contains(inputs.runner_labels, 'IncusOS') }}
-        env:
+      # Serialize the github context for the ansible playbook's Slack
+      # notification step. Pure-bash wrap (no python3 dep — toJSON already
+      # produces valid JSON, we just nest it under a `github_context` key
+      # so ansible loads it as `-e "@..."` into that variable).
+      - env:
           GITHUB_CONTEXT: ${{ toJSON(github) }}
         run: |
-          python3 -c 'import json,os,sys; json.dump({"github_context": json.loads(os.environ["GITHUB_CONTEXT"])}, sys.stdout)' > github-context.json
+          printf '{"github_context": %s}\n' "$GITHUB_CONTEXT" > github-context.json
           cat github-context.json
 
       # IncusOS path (levi): new playbook resolves repo/branch/subdir from
-      # ansible/vars/static-sites.yaml keyed off target_fqdn, so context_root
-      # and the github-context file aren't passed through.
+      # ansible/vars/static-sites.yaml keyed off target_fqdn. context_root
+      # is not passed (the catalog already knows each FQDN's subdir);
+      # github-context.json IS passed so the playbook's Slack notification
+      # can attribute the deploy to a commit / branch / actor.
       - if: ${{ contains(inputs.runner_labels, 'IncusOS') }}
         run: |
           run-ansible-playbook.sh playbooks/deploy-static-sites.yaml \
-          -e "target_fqdn=${{ needs.setup.outputs.website_fqdn }}"
+          -e "target_fqdn=${{ needs.setup.outputs.website_fqdn }}" \
+          -e "@/github-context.json"
 
       # Legacy XCP-ng path, context root provided
       - if: ${{ !contains(inputs.runner_labels, 'IncusOS') && inputs.context_root && inputs.context_root != '' }}
