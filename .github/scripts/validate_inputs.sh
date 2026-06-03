@@ -13,10 +13,20 @@ if [ -n "$WEBSITE_FQDN" ]; then
     "data.chnm.org"|\
     "dev.apiary.rrchnm.org"|\
     "dev.workspace.apiary.rrchnm.org"|\
+    "20th.dev.chnm.gmu.edu"|\
     "911.dev.chnm.gmu.edu"|\
+    "bracero.dev.chnm.gmu.edu"|\
+    "eec.dev.chnm.gmu.edu"|\
     "futl.dev.chnm.gmu.edu"|\
+    "heaamerica.dev.chnm.gmu.edu"|\
+    "iowmaterial.dev.chnm.gmu.edu"|\
+    "islampers.dev.chnm.gmu.edu"|\
+    "mallhistory.dev.chnm.gmu.edu"|\
     "occupyarchive.dev.chnm.gmu.edu"|\
     "resounding.dev.chnm.gmu.edu"|\
+    "thanksroy.dev.chnm.gmu.edu"|\
+    "transatlaenc.dev.chnm.gmu.edu"|\
+    "valostat.dev.chnm.gmu.edu"|\
     "hugo.chnm.gmu.edu"|\
     "civilwargraffiti.org"|\
     "dev.civilwargraffiti.org"|\
@@ -33,7 +43,6 @@ if [ -n "$WEBSITE_FQDN" ]; then
     "digitalcampus.tv"|\
     "dissdb.dev.rrchnm.org"|\
     "dohistory.org"|\
-    "eec.dev.chnm.gmu.edu"|\
     "eagleeyecitizen.org"|\
     "earlymodernviolence.org"|\
     "dev.earlymodernviolence.org"|\
