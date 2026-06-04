@@ -39,6 +39,10 @@ on:
       website-prod-fqdn:                  # fqdn of production website
         required: true
         type: string
+      runner_labels:                      # JSON array of labels for the
+        required: false                   # self-hosted deploy job; default
+        type: string                      # pins to the legacy XCP-ng runner
+        default: '["self-hosted","XCP-ng"]'
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -271,7 +275,7 @@ jobs:
 ######################
 
   deploy-ansible-playbook:
-    runs-on: self-hosted
+    runs-on: ${{ fromJSON(inputs.runner_labels) }}
     needs: [setup, build-hugo]
     if: >
       always() && !cancelled() &&
