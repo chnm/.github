@@ -31,6 +31,10 @@ on:
       release-tag-name-type:              # semvar | iso
         required: true
         type: string
+      tag-prefix:                         # optional prefix for tag/release name;
+        required: false                   # use for monorepo per-module releases,
+        type: string                      # e.g. "module-a/" → tag "module-a/v0.1.2".
+        default: ''                       # semvar lookup scopes to "${prefix}v*".
 
       # Deployment Input Vars
       website-devl-fqdn:                  # fqdn of development website
@@ -177,36 +181,44 @@ jobs:
       - if: inputs.release-tag-name-type == 'iso'
         name: Set RELEASE_NAME / RELEASE_TAG_NAME env (iso)
         run: |
-          echo "RELEASE_NAME=${{ steps.build_timestamp.outputs.ts }}" >> $GITHUB_ENV
-          echo "RELEASE_TAG_NAME=${{ steps.build_timestamp_for_tag.outputs.ts }}" >> $GITHUB_ENV
+          echo "RELEASE_NAME=${{ inputs.tag-prefix }}${{ steps.build_timestamp.outputs.ts }}" >> $GITHUB_ENV
+          echo "RELEASE_TAG_NAME=${{ inputs.tag-prefix }}${{ steps.build_timestamp_for_tag.outputs.ts }}" >> $GITHUB_ENV
 
+      # Scope the previous-tag lookup to "${tag-prefix}v*" so monorepos can
+      # release each module independently. `bootstrap=true` when no prior
+      # tag exists for this prefix — drives the minor-bump branch below.
       - id: previoustag
         if: inputs.release-tag-name-type == 'semvar'
-        name: Get previous tag
-        uses: 'WyriHaximus/github-action-get-previous-tag@v1'
+        name: Get previous tag (scoped by tag-prefix)
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          fallback: 0.0.9
-          prefix: v
+          PREFIX: ${{ inputs.tag-prefix }}
+        run: |
+          if tag=$(git describe --tags --abbrev=0 --match "${PREFIX}v*" 2>/dev/null); then
+            version=${tag#${PREFIX}v}
+            echo "bootstrap=false" >> $GITHUB_OUTPUT
+          else
+            version="0.0.9"
+            echo "bootstrap=true" >> $GITHUB_OUTPUT
+          fi
+          echo "version=${version}" >> $GITHUB_OUTPUT
 
       - id: semver
         if: inputs.release-tag-name-type == 'semvar'
-        name: Get next minor version
+        name: Get next semantic version
         uses: 'WyriHaximus/github-action-next-semvers@v1'
         with:
-          version: ${{ steps.previoustag.outputs.tag }}
+          version: ${{ steps.previoustag.outputs.version }}
 
-      - if: inputs.release-tag-name-type == 'semvar'
+      - if: inputs.release-tag-name-type == 'semvar' && steps.previoustag.outputs.bootstrap == 'false'
         name: Set RELEASE_NAME / RELEASE_TAG_NAME env (semvar)
         run: |
-          echo "RELEASE_NAME=${{ steps.semver.outputs.v_patch }}" >> $GITHUB_ENV
-          echo "RELEASE_TAG_NAME=${{ steps.semver.outputs.v_patch }}" >> $GITHUB_ENV
-      - if: inputs.release-tag-name-type == 'semvar' && steps.semver.outputs.tag == '0.9.0'
+          echo "RELEASE_NAME=${{ inputs.tag-prefix }}${{ steps.semver.outputs.v_patch }}" >> $GITHUB_ENV
+          echo "RELEASE_TAG_NAME=${{ inputs.tag-prefix }}${{ steps.semver.outputs.v_patch }}" >> $GITHUB_ENV
+      - if: inputs.release-tag-name-type == 'semvar' && steps.previoustag.outputs.bootstrap == 'true'
         name: Set RELEASE_NAME / RELEASE_TAG_NAME env (semvar bootstrap)
         run: |
-          echo "RELEASE_NAME=${{ steps.semver.outputs.v_minor }}" >> $GITHUB_ENV
-          echo "RELEASE_TAG_NAME=${{ steps.semver.outputs.v_minor }}" >> $GITHUB_ENV
+          echo "RELEASE_NAME=${{ inputs.tag-prefix }}${{ steps.semver.outputs.v_minor }}" >> $GITHUB_ENV
+          echo "RELEASE_TAG_NAME=${{ inputs.tag-prefix }}${{ steps.semver.outputs.v_minor }}" >> $GITHUB_ENV
 
       - name: Generate RELEASE.md
         run: |
@@ -281,17 +293,39 @@ jobs:
       always() && !cancelled() &&
       needs.build-hugo.result == 'success'
     steps:
+      # Serialize the github context for the ansible playbook's Slack
+      # notification step. Pure-bash wrap (no python3 dep — toJSON already
+      # produces valid JSON, we just nest it under a `github_context` key
+      # so ansible loads it as `-e "@..."` into that variable).
       - env:
           GITHUB_CONTEXT: ${{ toJSON(github) }}
         run: |
-          python3 -c 'import json,os,sys; json.dump({"github_context": json.loads(os.environ["GITHUB_CONTEXT"])}, sys.stdout)' > github-context.json
+          printf '{"github_context": %s}\n' "$GITHUB_CONTEXT" > github-context.json
           cat github-context.json
 
-      - env:
+      # IncusOS path (levi): new playbook resolves repo/branch/subdir from
+      # ansible/vars/hugo-sites.yaml keyed off target_fqdn. The build tarball
+      # has already been published as a GitHub release by build-hugo, so the
+      # playbook fetches the release artifact itself; github-context.json IS
+      # passed so the playbook's Slack notification can attribute the deploy
+      # to a commit / branch / actor. GITHUB_CONTEXT_PATH tells
+      # run-ansible-playbook.sh to bind-mount the host file in as
+      # /github-context.json inside the inner ansible container.
+      - if: ${{ contains(inputs.runner_labels, 'IncusOS') }}
+        env:
+          GITHUB_CONTEXT_PATH: "${{ github.workspace }}/github-context.json"
+        run: |
+          run-ansible-playbook.sh playbooks/deploy-hugo-sites.yaml \
+          -e "target_fqdn=${{ needs.setup.outputs.website_fqdn }}" \
+          -e "@/github-context.json"
+
+      # Legacy XCP-ng path
+      - if: ${{ !contains(inputs.runner_labels, 'IncusOS') }}
+        env:
           GITHUB_CONTEXT_PATH: "${{ github.workspace }}/github-context.json"
         run: |
           run-ansible-playbook.sh playbooks/deploy-ssg-website.yaml \
-          -e input_website_fqdn=${{ needs.setup.outputs.website_fqdn }} \
+          -e "input_website_fqdn=${{ needs.setup.outputs.website_fqdn }}" \
           -e "@/github-context.json"
 
   deploy-notify:
