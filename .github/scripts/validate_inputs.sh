@@ -18,7 +18,8 @@ if [ -n "$WEBSITE_FQDN" ]; then
     "bracero.dev.chnm.gmu.edu"|\
     "eec.dev.chnm.gmu.edu"|\
     "futl.dev.chnm.gmu.edu"|\
-    "heaamerica.dev.chnm.gmu.edu"|\
+    "hearamerica.dev.chnm.gmu.edu"|\
+    "hurricane.dev.chnm.gmu.edu"|\
     "iowmaterial.dev.chnm.gmu.edu"|\
     "islampers.dev.chnm.gmu.edu"|\
     "mallhistory.dev.chnm.gmu.edu"|\
