@@ -293,40 +293,12 @@ jobs:
       always() && !cancelled() &&
       needs.build-hugo.result == 'success'
     steps:
-      # Serialize the github context for the ansible playbook's Slack
-      # notification step. Pure-bash wrap (no python3 dep — toJSON already
-      # produces valid JSON, we just nest it under a `github_context` key
-      # so ansible loads it as `-e "@..."` into that variable).
-      - env:
-          GITHUB_CONTEXT: ${{ toJSON(github) }}
-        run: |
-          printf '{"github_context": %s}\n' "$GITHUB_CONTEXT" > github-context.json
-          cat github-context.json
-
-      # IncusOS path (levi): new playbook resolves repo/branch/subdir from
-      # ansible/vars/hugo-sites.yaml keyed off target_fqdn. The build tarball
-      # has already been published as a GitHub release by build-hugo, so the
-      # playbook fetches the release artifact itself; github-context.json IS
-      # passed so the playbook's Slack notification can attribute the deploy
-      # to a commit / branch / actor. GITHUB_CONTEXT_PATH tells
-      # run-ansible-playbook.sh to bind-mount the host file in as
-      # /github-context.json inside the inner ansible container.
-      - if: ${{ contains(inputs.runner_labels, 'IncusOS') }}
-        env:
-          GITHUB_CONTEXT_PATH: "${{ github.workspace }}/github-context.json"
-        run: |
-          run-ansible-playbook.sh playbooks/deploy-hugo-sites.yaml \
-          -e "target_fqdn=${{ needs.setup.outputs.website_fqdn }}" \
-          -e "@/github-context.json"
-
-      # Legacy XCP-ng path
-      - if: ${{ !contains(inputs.runner_labels, 'IncusOS') }}
-        env:
-          GITHUB_CONTEXT_PATH: "${{ github.workspace }}/github-context.json"
-        run: |
-          run-ansible-playbook.sh playbooks/deploy-ssg-website.yaml \
-          -e "input_website_fqdn=${{ needs.setup.outputs.website_fqdn }}" \
-          -e "@/github-context.json"
+      # Playbook invocation (context json + IncusOS/legacy paths) is shared with
+      # hugo--deploy.yml via this composite action.
+      - uses: chnm/.github/.github/actions/hugo-ansible-deploy@main
+        with:
+          website-fqdn:  ${{ needs.setup.outputs.website_fqdn }}
+          runner-labels: ${{ inputs.runner_labels }}
 
   deploy-notify:
     name: Deployment Notification

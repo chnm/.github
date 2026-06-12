@@ -1,0 +1,61 @@
+# Composite action: invoke the RRCHNM ansible playbook to deploy an
+# already-built/released Hugo site to its target FQDN. Shared by the deploy
+# jobs in hugo--deploy.yml and hugo--build-release-deploy.yml so the playbook
+# invocation (IncusOS vs legacy, playbook names, args) lives in one place.
+#
+# Repo path: chnm/.github/.github/actions/hugo-ansible-deploy/action.yml
+# Reference as:  uses: chnm/.github/.github/actions/hugo-ansible-deploy@main
+#
+# Runs on the self-hosted deploy runner; run-ansible-playbook.sh and the
+# playbooks/ tree are provided by that runner, not the checked-out workspace.
+name: Hugo Ansible Deploy
+description: Deploy a built Hugo site to its FQDN via the RRCHNM ansible playbook.
+
+inputs:
+  website-fqdn:
+    description: Target FQDN to deploy to (already resolved to prod/devl).
+    required: true
+  runner-labels:
+    description: >
+      JSON array of the deploy runner labels; used to pick the IncusOS vs the
+      legacy XCP-ng playbook path (matches the calling job's runs-on).
+    required: true
+
+runs:
+  using: composite
+  steps:
+    # Serialize the github context for the ansible playbook's Slack
+    # notification step. Pure-bash wrap (no python3 dep — toJSON already
+    # produces valid JSON, we just nest it under a `github_context` key so
+    # ansible loads it as `-e "@..."` into that variable).
+    - shell: bash
+      env:
+        GITHUB_CONTEXT: ${{ toJSON(github) }}
+      run: |
+        printf '{"github_context": %s}\n' "$GITHUB_CONTEXT" > github-context.json
+        cat github-context.json
+
+    # IncusOS path (levi): deploy-hugo-sites.yaml resolves repo/branch/subdir
+    # from ansible/vars/hugo-sites.yaml keyed off target_fqdn and fetches the
+    # release artifact itself. github-context.json IS passed so the playbook's
+    # Slack notification can attribute the deploy to a commit / branch / actor.
+    # GITHUB_CONTEXT_PATH tells run-ansible-playbook.sh to bind-mount the host
+    # file in as /github-context.json inside the inner ansible container.
+    - if: ${{ contains(inputs.runner-labels, 'IncusOS') }}
+      shell: bash
+      env:
+        GITHUB_CONTEXT_PATH: "${{ github.workspace }}/github-context.json"
+      run: |
+        run-ansible-playbook.sh playbooks/deploy-hugo-sites.yaml \
+        -e "target_fqdn=${{ inputs.website-fqdn }}" \
+        -e "@/github-context.json"
+
+    # Legacy XCP-ng path
+    - if: ${{ !contains(inputs.runner-labels, 'IncusOS') }}
+      shell: bash
+      env:
+        GITHUB_CONTEXT_PATH: "${{ github.workspace }}/github-context.json"
+      run: |
+        run-ansible-playbook.sh playbooks/deploy-ssg-website.yaml \
+        -e "input_website_fqdn=${{ inputs.website-fqdn }}" \
+        -e "@/github-context.json"
