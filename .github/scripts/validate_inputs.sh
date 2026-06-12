@@ -48,7 +48,7 @@ if [ -n "$WEBSITE_FQDN" ]; then
     "earlymodernviolence.org"|\
     "dev.earlymodernviolence.org"|\
     "forustheliving.org"|\
-
+    \
     "games.rrchnm.org"|\
     "1665plague.rrchnm.org"|\
     "1812shipping.rrchnm.org"|\
@@ -57,7 +57,7 @@ if [ -n "$WEBSITE_FQDN" ]; then
     "1665plague.dev.chnm.gmu.edu"|\
     "1812shipping.dev.chnm.gmu.edu"|\
     "illuminated.dev.chnm.gmu.edu"|\
-    
+    \
     "historymatters.gmu.edu"|\
     "dev.lasfera.rrchnm.org"|\
     "lasfera.rrchnm.org"|\
