@@ -1,0 +1,75 @@
+# Composite action: select the prod-vs-dev website FQDN for the current git
+# ref and validate it against the allowlist in .github/scripts/. Replaces the
+# copy-pasted "set devl / set prod / checkout / run validate" step block that
+# used to live in every reusable deploy workflow, so the selection + allowlist
+# policy lives in exactly one place.
+#
+# Repo path: chnm/.github/.github/actions/validate-fqdn/action.yml
+# Reference as:  uses: chnm/.github/.github/actions/validate-fqdn@main
+#
+# The validator script + allowlist are NOT vendored into this action dir; they
+# stay at .github/scripts/ (single source of truth) and are reached via a
+# relative path from $GITHUB_ACTION_PATH, since referencing this action checks
+# out the whole .github repo.
+name: Validate website FQDN
+description: >
+  Resolve WEBSITE_FQDN to the prod or dev value based on the git ref and
+  validate it against scripts/allowed_fqdns.txt. Fails the step (and thus the
+  job) when the resolved FQDN is empty or not on the allowlist.
+
+inputs:
+  website-devl-fqdn:
+    description: FQDN to deploy to on the development ref(s).
+    required: true
+  website-prod-fqdn:
+    description: FQDN to deploy to on the production ref.
+    required: true
+  prod-ref:
+    description: Git ref that selects the production FQDN.
+    required: false
+    default: refs/heads/main
+  devl-ref:
+    description: >
+      Git ref that selects the development FQDN. Leave empty (default) to use
+      the dev FQDN as the fallback for ANY non-prod ref. Set it to gate dev
+      deploys to a single ref — any ref matching neither prod-ref nor devl-ref
+      then resolves to an empty FQDN and fails validation (e.g. jekyll, which
+      only deploys from refs/heads/preview and refs/heads/main).
+    required: false
+    default: ''
+
+outputs:
+  website_fqdn:
+    description: The selected, allowlist-validated website FQDN.
+    value: ${{ steps.validate.outputs.website_fqdn }}
+
+runs:
+  using: composite
+  steps:
+    - name: Select and validate WEBSITE_FQDN
+      id: validate
+      shell: bash
+      env:
+        GITHUB_REF: ${{ github.ref }}
+        PROD_REF: ${{ inputs.prod-ref }}
+        DEVL_REF: ${{ inputs.devl-ref }}
+        PROD_FQDN: ${{ inputs.website-prod-fqdn }}
+        DEVL_FQDN: ${{ inputs.website-devl-fqdn }}
+      run: |
+        set -eu
+        if [ "$GITHUB_REF" = "$PROD_REF" ]; then
+          WEBSITE_FQDN="$PROD_FQDN"
+        elif [ -n "$DEVL_REF" ]; then
+          # dev is gated to a specific ref; anything else stays empty and fails.
+          if [ "$GITHUB_REF" = "$DEVL_REF" ]; then
+            WEBSITE_FQDN="$DEVL_FQDN"
+          else
+            WEBSITE_FQDN=""
+          fi
+        else
+          # dev is the default target for any non-prod ref.
+          WEBSITE_FQDN="$DEVL_FQDN"
+        fi
+        export WEBSITE_FQDN
+        "$GITHUB_ACTION_PATH/../../scripts/validate_inputs.sh"
+        echo "website_fqdn=$WEBSITE_FQDN" >> "$GITHUB_OUTPUT"

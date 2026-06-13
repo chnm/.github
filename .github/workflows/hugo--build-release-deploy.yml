@@ -53,7 +53,6 @@ env:
   CONTAINER_TAG: "${{ inputs.container-registry }}/chnm/${{ inputs.container-image-name }}:latest"
   RELEASE_NAME: ''
   RELEASE_TAG_NAME: ''
-  WEBSITE_FQDN: ''
 
 jobs:
 
@@ -81,23 +80,15 @@ jobs:
           echo "ref: ${{ github.ref }}"
           echo "sha: ${{ github.sha }}"
   
-      - name: Set WEBSITE_FQDN devl Env Var
-        run: echo "WEBSITE_FQDN=${{ inputs.website-devl-fqdn }}" >> $GITHUB_ENV
-      - name: Set WEBSITE_FQDN prod Env Var
-        if: github.ref == 'refs/heads/main'
-        run: echo "WEBSITE_FQDN=${{ inputs.website-prod-fqdn }}" >> $GITHUB_ENV
-
-      - uses: actions/checkout@v4
+      - name: Validate website FQDN
+        id: validate
+        uses: chnm/.github/.github/actions/validate-fqdn@main
         with:
-          repository: 'chnm/.github'
-          ref: 'main'
-      - name: Run Validate Inputs Script
-        run: ./.github/scripts/validate_inputs.sh
-        env:
-          WEBSITE_FQDN: "${{ env.WEBSITE_FQDN }}"
+          website-devl-fqdn: ${{ inputs.website-devl-fqdn }}
+          website-prod-fqdn: ${{ inputs.website-prod-fqdn }}
 
     outputs:
-      website_fqdn: ${{ env.WEBSITE_FQDN }}    
+      website_fqdn: ${{ steps.validate.outputs.website_fqdn }}    
 
 #################
 ###   BUILD   ###
