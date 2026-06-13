@@ -1,0 +1,92 @@
+# Allowlist of website FQDNs that the reusable deploy workflows are permitted
+# to target. Consumed by scripts/validate_inputs.sh.
+#
+# Format rules (enforced by the parser):
+#   - One FQDN per line.
+#   - Blank lines are ignored — use them freely to group entries.
+#   - Everything from a '#' to end-of-line is a comment (full-line or inline).
+#   - Surrounding whitespace is trimmed; matching is case-insensitive.
+#   - Entries are matched EXACTLY (no wildcards/globbing).
+#
+# To add a site: drop its prod (and dev) FQDN under the right group below.
+
+# === CHNM core infrastructure ===
+data.chnm.org
+hugo.chnm.gmu.edu
+historymatters.gmu.edu
+
+# === rrchnm.org (core + project subdomains) ===
+rrchnm.org
+hugo.rrchnm.org
+static.rrchnm.org
+1989.rrchnm.org
+crdh.rrchnm.org
+dev.crdh.rrchnm.org
+cyh.rrchnm.org
+lasfera.rrchnm.org
+dev.lasfera.rrchnm.org
+mappingpinkertons.rrchnm.org
+dev.outandabout.rrchnm.org
+dissdb.dev.rrchnm.org
+dev.connectingthreads.rrchnm.org
+dev.winterthur.rrchnm.org
+
+# --- apiary (rrchnm.org) ---
+dev.apiary.rrchnm.org
+dev.workspace.apiary.rrchnm.org
+
+# === rrchnm.site ===
+slack.rrchnm.site
+test.rrchnm.site
+devl.rrchnm.site
+
+# === *.dev.chnm.gmu.edu (dev sandboxes) ===
+20th.dev.chnm.gmu.edu
+911.dev.chnm.gmu.edu
+bracero.dev.chnm.gmu.edu
+eec.dev.chnm.gmu.edu
+futl.dev.chnm.gmu.edu
+hearamerica.dev.chnm.gmu.edu
+hurricane.dev.chnm.gmu.edu
+iowmaterial.dev.chnm.gmu.edu
+islampers.dev.chnm.gmu.edu
+mallhistory.dev.chnm.gmu.edu
+occupyarchive.dev.chnm.gmu.edu
+resounding.dev.chnm.gmu.edu
+thanksroy.dev.chnm.gmu.edu
+transatlaenc.dev.chnm.gmu.edu
+valostat.dev.chnm.gmu.edu
+
+# === Standalone project sites (prod + dev where applicable) ===
+911digitalarchive.org
+amboyna.org
+civilwargraffiti.org
+dev.civilwargraffiti.org
+connectingthreads.co.uk
+dev.connectingthreads.co.uk
+datascribe.tech
+deathbynumbers.org
+dev.deathbynumbers.org
+denigmanuscript.org
+digitalcampus.tv
+dohistory.org
+eagleeyecitizen.org
+earlymodernviolence.org
+dev.earlymodernviolence.org
+forustheliving.org
+legalmodernism.org
+chambers.legalmodernism.org
+maritime-asia.org
+mathhumanists.org
+objectofhistory.org
+occupyarchive.org
+outandaboutnova.org
+pilbarastrike.org
+religiousecologies.org
+dev.religiousecologies.org
+database.religiousecologies.org
+dev.database.religiousecologies.org
+sustainabledh.org
+dev.teachinghistory.org
+wardepartmentpapers.org
+hugo.wardepartmentpapers.org

@@ -1,98 +1,46 @@
 #!/bin/sh
+set -eu
 
-# this shell script will validate inputs used in the reusable workflows located
-# under .github/workflows/* and expects the inputs to be passed via environment variables.
-# i.e. hacky way to restrict input values
+# Validates inputs used by the reusable workflows under .github/workflows/*.
+# Inputs are passed via environment variables; this is a deliberately strict
+# allowlist that restricts which values the deploy jobs are permitted to act on.
+#
+# Currently validated:
+#   WEBSITE_FQDN  -- must exactly match an entry in scripts/allowed_fqdns.txt
+#
+# Exit status: 0 if every checked input is valid, 1 otherwise (with a reason
+# printed to stderr so failures are diagnosable from the workflow log).
 
-# validate website-fqdn input used in hugo build-release-deploy workflow
-if [ -n "$WEBSITE_FQDN" ]; then
-  case "$WEBSITE_FQDN" in
-    "1989.rrchnm.org"|\
-    "911digitalarchive.org"|\
-    "amboyna.org"|\
-    "data.chnm.org"|\
-    "dev.apiary.rrchnm.org"|\
-    "dev.workspace.apiary.rrchnm.org"|\
-    "20th.dev.chnm.gmu.edu"|\
-    "911.dev.chnm.gmu.edu"|\
-    "bracero.dev.chnm.gmu.edu"|\
-    "eec.dev.chnm.gmu.edu"|\
-    "futl.dev.chnm.gmu.edu"|\
-    "hearamerica.dev.chnm.gmu.edu"|\
-    "hurricane.dev.chnm.gmu.edu"|\
-    "iowmaterial.dev.chnm.gmu.edu"|\
-    "islampers.dev.chnm.gmu.edu"|\
-    "mallhistory.dev.chnm.gmu.edu"|\
-    "occupyarchive.dev.chnm.gmu.edu"|\
-    "resounding.dev.chnm.gmu.edu"|\
-    "thanksroy.dev.chnm.gmu.edu"|\
-    "transatlaenc.dev.chnm.gmu.edu"|\
-    "valostat.dev.chnm.gmu.edu"|\
-    "hugo.chnm.gmu.edu"|\
-    "civilwargraffiti.org"|\
-    "dev.civilwargraffiti.org"|\
-    "connectingthreads.co.uk"|\
-    "dev.connectingthreads.co.uk"|\
-    "dev.connectingthreads.rrchnm.org"|\
-    "crdh.rrchnm.org"|\
-    "cyh.rrchnm.org"|\
-    "dev.crdh.rrchnm.org"|\
-    "datascribe.tech"|\
-    "deathbynumbers.org"|\
-    "dev.deathbynumbers.org"|\
-    "denigmanuscript.org"|\
-    "digitalcampus.tv"|\
-    "dissdb.dev.rrchnm.org"|\
-    "dohistory.org"|\
-    "eagleeyecitizen.org"|\
-    "earlymodernviolence.org"|\
-    "dev.earlymodernviolence.org"|\
-    "forustheliving.org"|\
-    \
-    "games.rrchnm.org"|\
-    "1665plague.rrchnm.org"|\
-    "1812shipping.rrchnm.org"|\
-    "illuminated.rrchnm.org"|\
-    "games.dev.chnm.gmu.edu"|\
-    "1665plague.dev.chnm.gmu.edu"|\
-    "1812shipping.dev.chnm.gmu.edu"|\
-    "illuminated.dev.chnm.gmu.edu"|\
-    \
-    "historymatters.gmu.edu"|\
-    "dev.lasfera.rrchnm.org"|\
-    "lasfera.rrchnm.org"|\
-    "legalmodernism.org"|\
-    "chambers.legalmodernism.org"|\
-    "mappingpinkertons.rrchnm.org"|\
-    "maritime-asia.org"|\
-    "mathhumanists.org"|\
-    "dev.outandabout.rrchnm.org"|\
-    "outandaboutnova.org"|\
-    "objectofhistory.org"|\
-    "occupyarchive.org"|\
-    "pilbarastrike.org"|\
-    "religiousecologies.org"|\
-    "dev.religiousecologies.org"|\
-    "database.religiousecologies.org"|\
-    "dev.database.religiousecologies.org"|\
-    "rrchnm.org"|\
-    "hugo.rrchnm.org"|\
-    "sustainabledh.org"|\
-    "dev.teachinghistory.org"|\
-    "wardepartmentpapers.org"|\
-    "hugo.wardepartmentpapers.org"|\
-    "dev.winterthur.rrchnm.org"|\
-    "slack.rrchnm.site"|\
-    "static.rrchnm.org"|\
-    "test.rrchnm.site"|\
-    "devl.rrchnm.site")
-        exit 0
-    ;;
-    *)
-        exit 1
-    ;;
-  esac
-fi
+ALLOWLIST="$(dirname "$0")/allowed_fqdns.txt"
 
-exit 1
+# Validate WEBSITE_FQDN against the allowlist file. Comments (#... ), blank
+# lines and surrounding whitespace are ignored; matching is case-insensitive
+# and exact (no globbing), so grouping/annotating the list is free.
+validate_website_fqdn() {
+  value="${WEBSITE_FQDN:-}"
+  if [ -z "$value" ]; then
+    echo "validate_inputs: WEBSITE_FQDN is empty or unset" >&2
+    return 1
+  fi
 
+  if [ ! -r "$ALLOWLIST" ]; then
+    echo "validate_inputs: allowlist not found or unreadable: $ALLOWLIST" >&2
+    return 1
+  fi
+
+  needle="$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')"
+  while IFS= read -r line || [ -n "$line" ]; do
+    entry="${line%%#*}"                                   # strip inline/full comments
+    entry="$(printf '%s' "$entry" | tr -d '[:space:]')"   # trim all whitespace
+    [ -n "$entry" ] || continue
+    entry="$(printf '%s' "$entry" | tr '[:upper:]' '[:lower:]')"
+    if [ "$entry" = "$needle" ]; then
+      return 0
+    fi
+  done < "$ALLOWLIST"
+
+  echo "validate_inputs: WEBSITE_FQDN '$value' is not in the allowlist ($ALLOWLIST)" >&2
+  return 1
+}
+
+validate_website_fqdn
