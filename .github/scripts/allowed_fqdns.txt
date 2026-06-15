@@ -30,6 +30,10 @@ dev.outandabout.rrchnm.org
 dissdb.dev.rrchnm.org
 dev.connectingthreads.rrchnm.org
 dev.winterthur.rrchnm.org
+games.rrchnm.org
+1665plague.rrchnm.org
+1812shipping.rrchnm.org
+illuminated.rrchnm.org
 
 # --- apiary (rrchnm.org) ---
 dev.apiary.rrchnm.org
@@ -56,6 +60,10 @@ resounding.dev.chnm.gmu.edu
 thanksroy.dev.chnm.gmu.edu
 transatlaenc.dev.chnm.gmu.edu
 valostat.dev.chnm.gmu.edu
+games.dev.chnm.gmu.edu
+1665plague.dev.chnm.gmu.edu
+1812shipping.dev.chnm.gmu.edu
+illuminated.dev.chnm.gmu.edu
 
 # === Standalone project sites (prod + dev where applicable) ===
 911digitalarchive.org
