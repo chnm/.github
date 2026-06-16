@@ -1,0 +1,77 @@
+name: Mirror images to Zot
+
+# Reusable: copies freshly-published ghcr.io images into the internal Zot
+# pull-through mirror (oci.rrchnm.internal) so cluster/CI pulls see the new
+# tag immediately instead of waiting on Zot's onDemand 6h poll. crane does a
+# registry-to-registry copy (no local docker pull), preserving the full
+# manifest/index (incl. build-push-action attestations). Runs on a self-hosted
+# runner because Zot is LAN-only — a GitHub-hosted runner can't reach it.
+#
+# Caller (after the build job):
+#   jobs:
+#     mirror:
+#       needs: build
+#       if: github.event_name != 'pull_request'
+#       uses: chnm/.github/.github/workflows/mirror-to-zot.yml@main
+#       with:
+#         images: ${{ needs.build.outputs.published_images }}   # newline/space-separated ghcr refs
+
+on:
+  workflow_call:
+    inputs:
+      images:
+        description: "ghcr.io image refs (newline- or space-separated) to mirror"
+        required: true
+        type: string
+      source_registry:
+        description: "Source registry host to rewrite from"
+        required: false
+        type: string
+        default: ghcr.io
+      dest_registry:
+        description: "Destination Zot host"
+        required: false
+        type: string
+        default: oci.rrchnm.internal
+
+permissions:
+  contents: read
+  packages: read          # GITHUB_TOKEN reads the just-pushed (private) source images
+
+jobs:
+  mirror:
+    runs-on: [self-hosted, IncusOS]   # levi — adjust label if you scope runners
+    steps:
+      - name: Install crane
+        uses: imjasonh/setup-crane@v0.4   # or drop this once crane is baked into the runner image
+
+      - name: Log crane in to the source registry (read)
+        run: crane auth login "${{ inputs.source_registry }}" -u "${{ github.actor }}" -p "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Copy each image ghcr.io -> Zot
+        env:
+          SRC: ${{ inputs.source_registry }}
+          DST: ${{ inputs.dest_registry }}
+          IMAGES: ${{ inputs.images }}
+        run: |
+          set -uo pipefail
+          rc=0
+          for ref in $IMAGES; do          # default IFS splits on space AND newline
+            case "$ref" in
+              ""|"(none)")        continue ;;
+              "$SRC"/*)           : ;;
+              *) echo "skip (not $SRC): $ref"; continue ;;
+            esac
+            dst="$DST/${ref#$SRC/}"
+            echo "::group::$ref  ->  $dst"
+            if crane copy "$ref" "$dst"; then
+              echo "mirrored $dst"
+            else
+              echo "::warning title=Zot mirror failed::$ref -> $dst"
+              rc=1
+            fi
+            echo "::endgroup::"
+          done
+          # Best-effort: ghcr is the source of truth and the push already succeeded;
+          # a Zot blip shouldn't fail the pipeline. Flip to `exit $rc` if you want it to gate.
+          exit 0
