@@ -41,11 +41,14 @@ permissions:
 jobs:
   mirror:
     runs-on: [self-hosted, IncusOS]   # levi — adjust label if you scope runners
+    timeout-minutes: 7
     steps:
       - name: Install crane
+        continue-on-error: true
         uses: imjasonh/setup-crane@v0.4   # or drop this once crane is baked into the runner image
 
       - name: Log crane in to the source registry (read)
+        continue-on-error: true
         run: crane auth login "${{ inputs.source_registry }}" -u "${{ github.actor }}" -p "${{ secrets.GITHUB_TOKEN }}"
 
       - name: Copy each image ghcr.io -> Zot
