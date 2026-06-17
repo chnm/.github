@@ -60,6 +60,7 @@ resounding.dev.chnm.gmu.edu
 thanksroy.dev.chnm.gmu.edu
 transatlaenc.dev.chnm.gmu.edu
 valostat.dev.chnm.gmu.edu
+whc.dev.chnm.gmu.edu
 games.dev.chnm.gmu.edu
 1665plague.dev.chnm.gmu.edu
 1812shipping.dev.chnm.gmu.edu
@@ -97,4 +98,5 @@ dev.database.religiousecologies.org
 sustainabledh.org
 dev.teachinghistory.org
 wardepartmentpapers.org
+worldhistorycommons.org
 hugo.wardepartmentpapers.org
