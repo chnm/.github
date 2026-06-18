@@ -54,6 +54,7 @@ hearamerica.dev.chnm.gmu.edu
 hurricane.dev.chnm.gmu.edu
 iowmaterial.dev.chnm.gmu.edu
 islampers.dev.chnm.gmu.edu
+jdh.dev.chnm.gmu.edu
 mallhistory.dev.chnm.gmu.edu
 occupyarchive.dev.chnm.gmu.edu
 resounding.dev.chnm.gmu.edu
@@ -83,6 +84,7 @@ eagleeyecitizen.org
 earlymodernviolence.org
 dev.earlymodernviolence.org
 forustheliving.org
+journalofdigitalhumanities.org
 legalmodernism.org
 chambers.legalmodernism.org
 maritime-asia.org
