@@ -43,7 +43,7 @@ jobs:
           echo "ref_type: ${{ github.ref_type }}"
           echo "ref: ${{ github.ref }}"
           echo "sha: ${{ github.sha }}"
-  
+
       - name: Validate website FQDN
         id: validate
         uses: chnm/.github/.github/actions/validate-fqdn@main
@@ -52,7 +52,7 @@ jobs:
           website-prod-fqdn: ${{ inputs.website-prod-fqdn }}
 
     outputs:
-      website_fqdn: ${{ steps.validate.outputs.website_fqdn }}    
+      website_fqdn: ${{ steps.validate.outputs.website_fqdn }}
 
   deploy-ansible-playbook:
     runs-on: ${{ fromJSON(inputs.runner_labels) }}
@@ -61,13 +61,37 @@ jobs:
       always() && !cancelled() &&
       needs.setup.result == 'success'
     steps:
+      # Serialize the github context for the ansible playbook's Slack
+      # notification step. Pure-bash wrap (no python3 dep — IncusOS runners are
+      # minimal and may lack it; toJSON already produces valid JSON, we just
+      # nest it under a `github_context` key so ansible loads it as `-e "@..."`
+      # into that variable).
       - env:
           GITHUB_CONTEXT: ${{ toJSON(github) }}
         run: |
-          python3 -c 'import json,os,sys; json.dump({"github_context": json.loads(os.environ["GITHUB_CONTEXT"])}, sys.stdout)' > github-context.json
+          printf '{"github_context": %s}\n' "$GITHUB_CONTEXT" > github-context.json
           cat github-context.json
 
-      - env:
+      # IncusOS path (levi): deploy-docker-compose.yaml resolves which docker
+      # host runs the stack from each host's docker_compose_stacks keyed off
+      # target_fqdn (no host arg needed). github-context.json IS passed so the
+      # playbook's Slack notification can attribute the deploy to a commit /
+      # branch / actor. GITHUB_CONTEXT_PATH tells run-ansible-playbook.sh to
+      # bind-mount the host file in as /github-context.json inside the inner
+      # ansible container. No tag_borg skip — the IncusOS docker_stack role
+      # backs up via restic, not borg.
+      - if: ${{ contains(inputs.runner_labels, 'IncusOS') }}
+        env:
+          GITHUB_CONTEXT_PATH: "${{ github.workspace }}/github-context.json"
+        run: |
+          run-ansible-playbook.sh playbooks/deploy-docker-compose.yaml \
+          -e "target_fqdn=${{ needs.setup.outputs.website_fqdn }}" \
+          -e "@/github-context.json"
+
+      # Legacy XCP-ng path: the legacy runner's deploy-docker-compose.yaml is
+      # keyed off input_website_fqdn and still uses borg (skipped here).
+      - if: ${{ !contains(inputs.runner_labels, 'IncusOS') }}
+        env:
           GITHUB_CONTEXT_PATH: "${{ github.workspace }}/github-context.json"
         run: |
           run-ansible-playbook.sh playbooks/deploy-docker-compose.yaml \
@@ -94,6 +118,6 @@ jobs:
             commit (${{ github.sha }}): ${{ github.event.commits[0].message }}
             ```
             View details at ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          SLACK_TITLE: 'Deployment Failed - `${{ github.repository }}` Release ${{ needs.release-create.outputs.release_name }}'
+          SLACK_TITLE: 'Deployment Failed - `${{ github.repository }}`'
           SLACK_USERNAME: rrchnm-systems
           SLACK_WEBHOOK: "${{ secrets.SLACK_WEBHOOK_SYSTEMS }}"
