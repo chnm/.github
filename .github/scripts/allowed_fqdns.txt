@@ -12,6 +12,7 @@
 
 # === CHNM core infrastructure ===
 data.chnm.org
+revolution.chnm.org
 hugo.chnm.gmu.edu
 historymatters.gmu.edu
 
@@ -58,6 +59,7 @@ jdh.dev.chnm.gmu.edu
 mallhistory.dev.chnm.gmu.edu
 occupyarchive.dev.chnm.gmu.edu
 resounding.dev.chnm.gmu.edu
+revolution.dev.chnm.gmu.edu
 thanksroy.dev.chnm.gmu.edu
 transatlaenc.dev.chnm.gmu.edu
 valostat.dev.chnm.gmu.edu
