@@ -27,6 +27,7 @@ cyh.rrchnm.org
 lasfera.rrchnm.org
 dev.lasfera.rrchnm.org
 mappingpinkertons.rrchnm.org
+mappingtheuniveristy.rrchnm.org
 model-articles.rrchnm.org
 dev.outandabout.rrchnm.org
 dissdb.dev.rrchnm.org
