@@ -75,7 +75,7 @@ illuminated.dev.chnm.gmu.edu
 
 # === pandemicreligion ===
 americanjewishlife.dev.chnm.gmu.edu
-collectingthesetimes.dev.chnm.gmu.ed
+collectingthesetimes.dev.chnm.gmu.edu
 hazon.dev.chnm.gmu.edu
 kahal.dev.chnm.gmu.edu
 onetable.dev.chnm.gmu.edu
