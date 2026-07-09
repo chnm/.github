@@ -73,6 +73,22 @@ games.dev.chnm.gmu.edu
 1812shipping.dev.chnm.gmu.edu
 illuminated.dev.chnm.gmu.edu
 
+# === pandemicreligion ===
+americanjewishlife.dev.chnm.gmu.edu
+collectingthesetimes.dev.chnm.gmu.ed
+hazon.dev.chnm.gmu.edu
+kahal.dev.chnm.gmu.edu
+onetable.dev.chnm.gmu.edu
+pandemicreligion.dev.chnm.gmu.edu
+preachinggoesviral.dev.chnm.gmu.edu
+collectingthesetimes.org
+pandemicreligion.org
+americanjewishlife.org
+hazon.collectingthesetimes.org
+kahal.collectingthesetimes.org
+onetable.collectingthesetimes.org
+preachinggoesviral.org
+
 # === gmu.edu ===
 plastercast.gmu.edu
 
