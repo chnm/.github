@@ -235,6 +235,29 @@ jobs:
     outputs:
       release_name: ${{ env.RELEASE_NAME }}
 
+  build-notify:
+    name: Build Failure Notification
+    needs: build-hugo
+    if: >
+      always() && !cancelled() &&
+      needs.build-hugo.result == 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: rtCamp/action-slack-notify@v2.2.0
+        env:
+          MSG_MINIMAL: true
+          SLACK_COLOR: '#c32a26'   # brand red — failure
+          SLACK_MESSAGE: |
+            ```
+            branch: ${{ github.ref_name }}
+            workflow_ref: ${{ github.workflow_ref }}
+            commit (${{ github.sha }}): ${{ github.event.commits[0].message }}
+            ```
+            View the failed run at ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SLACK_TITLE: 'Build FAILED :x: - `${{ github.repository }}`'
+          SLACK_USERNAME: rrchnm-systems
+          SLACK_WEBHOOK: "${{ secrets.SLACK_WEBHOOK_SYSTEMS }}"
+
   release-notify:
     name: Release Notification
     needs: build-hugo
