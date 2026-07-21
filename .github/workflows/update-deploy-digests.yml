@@ -51,9 +51,13 @@
           with:
             ref: ${{ inputs.ref }}          # persist-credentials (default) -> GITHUB_TOKEN push
 
-        - name: Install kustomize
+        - name: Install kustomize (pinned)
           run: |
-            curl -fsSL https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash -s 5.4.3 /usr/local/bin
+            mkdir -p "$HOME/.local/bin"
+            curl -fsSL https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash -s 5.4.3 "$HOME/.local/bin"
+            echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+            "$HOME/.local/bin/kustomize" version
+
         - name: Pin digests into the overlay
           env:
             DIGESTS: ${{ inputs.digests }}
