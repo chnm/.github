@@ -1,0 +1,93 @@
+  name: Update deploy digests (GitOps pin)
+
+  # Reusable write-back: pins container-image digests into a kustomize overlay's
+  # `images:` block and commits to the branch Argo watches, so Argo CD rolls the
+  # new image. Called by each image-build workflow after it pushes — same pattern
+  # as mirror-to-zot.yml.
+  #
+  # Only images ALREADY pinned in the overlay's kustomization are updated, so a
+  # caller may pass its whole published-digests list; irrelevant refs are ignored.
+  #
+  # Loop-safe: commits touch the overlay path only (keep that out of build-trigger
+  # path filters), and GITHUB_TOKEN pushes don't trigger workflows.
+
+  on:
+    workflow_call:
+      inputs:
+        digests:
+          description: Newline-separated <name>@sha256:<digest> refs (e.g. a build's published_digests).
+          required: true
+          type: string
+        overlay:
+          description: Repo-relative path to the kustomize overlay dir to pin into.
+          required: true
+          type: string
+        ref:
+          description: Branch to commit to (what Argo watches).
+          required: false
+          type: string
+          default: main
+        git-user-name:
+          required: false
+          type: string
+          default: RRCHNM-Systems
+        git-user-email:
+          required: false
+          type: string
+          default: syschnm@gmu.edu
+
+  # Serialize writes to the same overlay+branch so concurrent callers don't race.
+  concurrency:
+    group: deploy-digests-${{ inputs.overlay }}-${{ inputs.ref }}
+    cancel-in-progress: false
+
+  jobs:
+    pin:
+      runs-on: ubuntu-latest
+      permissions:
+        contents: write        # commit + push (the CALLER must also grant contents: write)
+      steps:
+        - uses: actions/checkout@v4
+          with:
+            ref: ${{ inputs.ref }}          # persist-credentials (default) -> GITHUB_TOKEN push
+
+        - name: Install kustomize
+          run: |
+            curl -fsSL https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash -s 5.4.3 /usr/local/bin
+        - name: Pin digests into the overlay
+          env:
+            DIGESTS: ${{ inputs.digests }}
+            OVERLAY: ${{ inputs.overlay }}
+          run: |
+            set -euo pipefail
+            kfile="$OVERLAY/kustomization.yaml"; [ -f "$kfile" ] || kfile="$OVERLAY/kustomization.yml"
+            [ -f "$kfile" ] || { echo "::error::no kustomization in $OVERLAY"; exit 1; }
+            touched=0
+            while read -r ref; do
+              [ -n "$ref" ] || continue
+              case "$ref" in *@sha256:*) : ;; *) continue ;; esac   # digest refs only
+              name="${ref%@*}"
+              if grep -qF "name: ${name}" "$kfile"; then
+                ( cd "$OVERLAY" && kustomize edit set image "$ref" )
+                echo "pinned $ref"; touched=1
+              fi
+            done <<< "$DIGESTS"
+            [ "$touched" = 1 ] || echo "no images in $OVERLAY matched the digest list"
+
+        - name: Commit + push if changed
+          env:
+            REF: ${{ inputs.ref }}
+            OVERLAY: ${{ inputs.overlay }}
+          run: |
+            set -euo pipefail
+            if git diff --quiet; then echo "no digest changes"; exit 0; fi
+            git config user.name  "${{ inputs.git-user-name }}"
+            git config user.email "${{ inputs.git-user-email }}"
+            git commit -am "deploy: pin ${OVERLAY} images to ${GITHUB_SHA:0:8}
+
+            Digest bump from build ${GITHUB_SHA} (${GITHUB_REPOSITORY}). Argo reconciles the change."
+            for i in 1 2 3 4 5; do
+              git pull --rebase origin "$REF" && git push origin "HEAD:$REF" && exit 0
+              echo "push race, retry $i"; sleep $((i * 3))
+            done
+            echo "::error::failed to push after retries"; exit 1
