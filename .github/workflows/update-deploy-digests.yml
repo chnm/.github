@@ -1,116 +1,108 @@
-  name: Update deploy digests (GitOps pin)
+name: Update deploy digests (GitOps pin)
 
-  # Reusable write-back: pins container-image digests into a kustomize overlay's
-  # `images:` block and commits to the branch Argo watches, so Argo CD rolls the
-  # new image. Called by each image-build workflow after it pushes — same pattern
-  # as mirror-to-zot.yml.
-  #
-  # Only images ALREADY pinned in the overlay's kustomization are updated, so a
-  # caller may pass its whole published-digests list; irrelevant refs are ignored.
-  #
-  # Loop-safe: commits touch the overlay path only (keep that out of build-trigger
-  # path filters), and GITHUB_TOKEN pushes don't trigger workflows.
+# Reusable write-back: pins container-image digests into a kustomize overlay's
+# `images:` block and commits to the branch Argo watches, so Argo CD rolls the
+# new image. Called by each image-build workflow after it pushes — same pattern
+# as mirror-to-zot.yml.
+#
+# Only images ALREADY pinned in the overlay's kustomization are updated, so a
+# caller may pass its whole published-digests list; irrelevant refs are ignored.
+#
+# Loop-safe: commits touch the overlay path only (keep that out of build-trigger
+# path filters), and GITHUB_TOKEN pushes don't trigger workflows.
+#
+# Race-safe: concurrent pin jobs (several callers write the same branch, and
+# up to three write the same overlay) are handled by the retry loop below —
+# each attempt re-applies the edit on the CURRENT tip, so losers stack their
+# pins on top of winners instead of dropping them. (2026-07-22: the previous
+# pull-rebase retry wedged on same-overlay merge conflicts — rebase-in-progress
+# ate all attempts — and the dropped pins left main pointing at digests Zot's
+# GC had reaped -> fleet-wide ImagePullBackOff. Re-editing cannot conflict.)
+#
+# NOTE: workflow-level `concurrency` is NOT declared here — it is ignored in
+# reusable (workflow_call) workflows. If serialization is ever wanted on top of
+# the retry loop, put a jobs-level concurrency group on each CALLER's pin job.
 
-  on:
-    workflow_call:
-      inputs:
-        digests:
-          description: Newline-separated <name>@sha256:<digest> refs (e.g. a build's published_digests).
-          required: true
-          type: string
-        overlay:
-          description: Repo-relative path to the kustomize overlay dir to pin into.
-          required: true
-          type: string
-        ref:
-          description: Branch to commit to (what Argo watches).
-          required: false
-          type: string
-          default: main
-        git-user-name:
-          required: false
-          type: string
-          default: RRCHNM-Systems
-        git-user-email:
-          required: false
-          type: string
-          default: syschnm@gmu.edu
+on:
+  workflow_call:
+    inputs:
+      digests:
+        description: Newline-separated <name>@sha256:<digest> refs (e.g. a build's published_digests).
+        required: true
+        type: string
+      overlay:
+        description: Repo-relative path to the kustomize overlay dir to pin into.
+        required: true
+        type: string
+      ref:
+        description: Branch to commit to (what Argo watches).
+        required: false
+        type: string
+        default: main
+      git-user-name:
+        required: false
+        type: string
+        default: RRCHNM-Systems
+      git-user-email:
+        required: false
+        type: string
+        default: syschnm@gmu.edu
 
-  # Serialize writes to the same overlay+branch so concurrent callers don't race.
-  concurrency:
-    group: deploy-digests-${{ inputs.overlay }}-${{ inputs.ref }}
-    cancel-in-progress: false
+jobs:
+  pin:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write        # commit + push (the CALLER must also grant contents: write)
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}          # persist-credentials (default) -> GITHUB_TOKEN push
 
-  jobs:
-    pin:
-      runs-on: ubuntu-latest
-      permissions:
-        contents: write        # commit + push (the CALLER must also grant contents: write)
-      steps:
-        - uses: actions/checkout@v4
-          with:
-            ref: ${{ inputs.ref }}          # persist-credentials (default) -> GITHUB_TOKEN push
+      - name: Install kustomize (pinned)
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash -s 5.4.3 "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/kustomize" version
 
-        - name: Install kustomize (pinned)
-          run: |
-            mkdir -p "$HOME/.local/bin"
-            curl -fsSL https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash -s 5.4.3 "$HOME/.local/bin"
-            echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-            "$HOME/.local/bin/kustomize" version
-
-        - name: Pin digests (re-edit on current tip + push, retried)
-          env:
-            DIGESTS: ${{ inputs.digests }}
-            OVERLAY: ${{ inputs.overlay }}
-          run: |
-            set -euo pipefail
-            git config user.name  "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            for attempt in 1 2 3 4 5; do
-              # Fresh tip every attempt: concurrent pin jobs race on main, and a
-              # rejected push means main moved — REDO the edit there instead of
-              # rebasing a stale commit (re-editing is conflict-free by construction).
-              git fetch origin main
-              git reset --hard origin/main
-              while IFS= read -r ref; do
-                [ -z "$ref" ] && continue
-                name="${ref%%@*}"
-                # UPDATE-only: kustomize edit would ADD unknown images; only touch
-                # entries the overlay already declares (the documented contract).
-                if grep -q "name: ${name}\$" "${OVERLAY}/kustomization.yaml"; then
-                  (cd "${OVERLAY}" && kustomize edit set image "${ref}")
-                fi
-              done <<< "${DIGESTS}"
-              if git diff --quiet; then
-                echo "nothing to pin (already current, or no matching entries) — done"
-                exit 0
+      - name: Pin digests (re-edit on current tip + push, retried)
+        env:
+          DIGESTS: ${{ inputs.digests }}
+          OVERLAY: ${{ inputs.overlay }}
+          REF: ${{ inputs.ref }}
+        run: |
+          set -euo pipefail
+          git config user.name  "${{ inputs.git-user-name }}"
+          git config user.email "${{ inputs.git-user-email }}"
+          for attempt in 1 2 3 4 5; do
+            # Fresh tip every attempt: concurrent pin jobs race on $REF, and a
+            # rejected push means it moved — REDO the edit there instead of
+            # rebasing a stale commit. Rebase conflicts on same-overlay edits
+            # wedge (rebase-in-progress; the 2026-07-22 dropped pins);
+            # re-editing is conflict-free by construction.
+            git fetch origin "$REF"
+            git reset --hard "origin/$REF"
+            while IFS= read -r ref; do
+              [ -z "$ref" ] && continue
+              name="${ref%%@*}"
+              # UPDATE-only: kustomize edit would ADD unknown images; only touch
+              # entries the overlay already declares (the documented contract).
+              if grep -q "name: ${name}\$" "${OVERLAY}/kustomization.yaml"; then
+                (cd "${OVERLAY}" && kustomize edit set image "${ref}")
               fi
-              git add "${OVERLAY}/kustomization.yaml"
-              git commit -m "ci: pin image digests in ${OVERLAY}"
-              if git push origin HEAD:main; then
-                echo "pinned on attempt ${attempt}"
-                exit 0
-              fi
-              echo "push rejected (attempt ${attempt}/5) — main moved under us; retrying"
-              sleep $(( RANDOM % 8 + 2 ))    # jitter so racing jobs don't re-collide
-            done
-            echo "::error::digest pin push failed after 5 attempts"
-            exit 1
-
-        - name: Commit + push if changed
-          env:
-            REF: ${{ inputs.ref }}
-            OVERLAY: ${{ inputs.overlay }}
-          run: |
-            set -euo pipefail
-            if git diff --quiet; then echo "no digest changes"; exit 0; fi
-            git config user.name  "${{ inputs.git-user-name }}"
-            git config user.email "${{ inputs.git-user-email }}"
-            git commit -am "deploy: pin ${OVERLAY} images to ${GITHUB_SHA:0:8}
-
-            Digest bump from build ${GITHUB_SHA} (${GITHUB_REPOSITORY}). Argo reconciles the change."
-            for i in 1 2 3 4 5; do
-              git pull --rebase origin "$REF" && git push origin "HEAD:$REF" && exit 0
-              echo "push race, retry $i"; sleep $((i * 3))
-            done
-            echo "::error::failed to push after retries"; exit 1
+            done <<< "${DIGESTS}"
+            if git diff --quiet; then
+              echo "nothing to pin (already current, or no matching entries) — done"
+              exit 0
+            fi
+            git commit -am "deploy: pin ${OVERLAY} images to ${GITHUB_SHA:0:8}" \
+                       -m "Digest bump from build ${GITHUB_SHA} (${GITHUB_REPOSITORY}). Argo reconciles the change."
+            if git push origin "HEAD:$REF"; then
+              echo "pinned on attempt ${attempt}"
+              exit 0
+            fi
+            echo "push rejected (attempt ${attempt}/5) — ${REF} moved under us; retrying"
+            sleep $(( RANDOM % 8 + 2 ))    # jitter so racing jobs don't re-collide
+          done
+          echo "::error::digest pin push failed after 5 attempts"
+          exit 1
