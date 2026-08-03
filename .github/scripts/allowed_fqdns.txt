@@ -24,6 +24,7 @@ static.rrchnm.org
 crdh.rrchnm.org
 dev.crdh.rrchnm.org
 cyh.rrchnm.org
+imagingthefrenchrevolution.rrchnm.org
 lasfera.rrchnm.org
 dev.lasfera.rrchnm.org
 mappingpinkertons.rrchnm.org
@@ -56,6 +57,7 @@ eec.dev.chnm.gmu.edu
 futl.dev.chnm.gmu.edu
 hearamerica.dev.chnm.gmu.edu
 hurricane.dev.chnm.gmu.edu
+imaging.dev.chnm.gmu.edu
 iowmaterial.dev.chnm.gmu.edu
 islampers.dev.chnm.gmu.edu
 jdh.dev.chnm.gmu.edu
