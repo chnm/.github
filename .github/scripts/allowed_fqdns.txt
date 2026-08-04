@@ -23,6 +23,7 @@ static.rrchnm.org
 1989.rrchnm.org
 crdh.rrchnm.org
 dev.crdh.rrchnm.org
+emm.rrchnm.org
 cyh.rrchnm.org
 imagingthefrenchrevolution.rrchnm.org
 lasfera.rrchnm.org
@@ -54,6 +55,7 @@ devl.rrchnm.site
 911.dev.chnm.gmu.edu
 bracero.dev.chnm.gmu.edu
 eec.dev.chnm.gmu.edu
+emm.dev.chnm.gmu.edu
 futl.dev.chnm.gmu.edu
 hearamerica.dev.chnm.gmu.edu
 hurricane.dev.chnm.gmu.edu
