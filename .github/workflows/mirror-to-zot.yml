@@ -1,77 +1,81 @@
 name: Mirror images to Zot
 
-# Reusable: copies freshly-published ghcr.io images into the internal Zot
-# pull-through mirror (oci.rrchnm.internal) so cluster/CI pulls see the new
-# tag immediately instead of waiting on Zot's onDemand 6h poll. crane does a
-# registry-to-registry copy (no local docker pull), preserving the full
-# manifest/index (incl. build-push-action attestations). Runs on a self-hosted
-# runner because Zot is LAN-only — a GitHub-hosted runner can't reach it.
-#
-# Caller (after the build job):
-#   jobs:
-#     mirror:
-#       needs: build
-#       if: github.event_name != 'pull_request'
-#       uses: chnm/.github/.github/workflows/mirror-to-zot.yml@main
-#       with:
-#         images: ${{ needs.build.outputs.published_images }}   # newline/space-separated ghcr refs
-
 on:
-  workflow_call:
-    inputs:
-      images:
-        description: "ghcr.io image refs (newline- or space-separated) to mirror"
-        required: true
-        type: string
-      source_registry:
-        description: "Source registry host to rewrite from"
-        required: false
-        type: string
-        default: ghcr.io
-      dest_registry:
-        description: "Destination Zot host"
-        required: false
-        type: string
-        default: oci.rrchnm.internal
+ workflow_call:
+   inputs:
+     images:
+       description: 'Newline/space-separated image refs to mirror (e.g. ghcr.io/org/repo/img:tag)'
+       required: true
+       type: string
+     source_registry:
+       default: 'ghcr.io'
+       type: string
+     dest_registry:
+       default: 'oci.rrchnm.internal'
+       type: string
+     parallelism:
+       default: 4
+       type: number
 
-permissions:
-  contents: read
-  packages: read          # GITHUB_TOKEN reads the just-pushed (private) source images
+# One mirror at a time per caller+ref — the self-hosted runner has finite pull
+# bandwidth, and overlapping runs are what let a newer run cancel an in-flight one.
+concurrency:
+ group: mirror-to-zot-${{ github.workflow }}-${{ github.ref }}
+ cancel-in-progress: false
 
 jobs:
-  mirror:
-    runs-on: [self-hosted, IncusOS]   # levi — adjust label if you scope runners
-    timeout-minutes: 7
-    steps:
+ mirror:
+   name: mirror
+   runs-on: [self-hosted, linux]        # <-- RECONCILE with your actual runner label(s)
+   timeout-minutes: 30
+   steps:
+     - name: Login to source (GHCR)
+       run: crane auth login "${{ inputs.source_registry }}" -u "${{ github.actor }}" -p "${{ secrets.GITHUB_TOKEN }}"
 
-      - name: Log crane in to the source registry (read)
-        continue-on-error: true
-        run: crane auth login "${{ inputs.source_registry }}" -u "${{ github.actor }}" -p "${{ secrets.GITHUB_TOKEN }}"
+     # If Zot needs auth, add it here, e.g.:
+     # - name: Login to dest (Zot)
+     #   run: crane auth login "${{ inputs.dest_registry }}" -u "${{ secrets.ZOT_USER }}" -p "${{ secrets.ZOT_PASSWORD }}"
 
-      - name: Copy each image ghcr.io -> Zot
-        env:
-          SRC: ${{ inputs.source_registry }}
-          DST: ${{ inputs.dest_registry }}
-          IMAGES: ${{ inputs.images }}
-        run: |
-          set -uo pipefail
-          rc=0
-          for ref in $IMAGES; do          # default IFS splits on space AND newline
-            case "$ref" in
-              ""|"(none)")        continue ;;
-              "$SRC"/*)           : ;;
-              *) echo "skip (not $SRC): $ref"; continue ;;
-            esac
-            dst="$DST/${ref#$SRC/}"
-            echo "::group::$ref  ->  $dst"
-            if crane copy "$ref" "$dst"; then
-              echo "mirrored $dst"
-            else
-              echo "::warning title=Zot mirror failed::$ref -> $dst"
-              rc=1
-            fi
-            echo "::endgroup::"
-          done
-          # Best-effort: ghcr is the source of truth and the push already succeeded;
-          # a Zot blip shouldn't fail the pipeline. Flip to `exit $rc` if you want it to gate.
-          exit 0
+     - name: Mirror (parallel + retry)
+       env:
+         SRC: ${{ inputs.source_registry }}
+         DST: ${{ inputs.dest_registry }}
+         IMAGES: ${{ inputs.images }}
+         PAR: ${{ inputs.parallelism }}
+         GATE: '0'   # set to '1' to fail the pipeline if any copy fails
+       run: |
+         set -uo pipefail
+
+         # Normalize the ref list (space OR newline separated); keep only SRC refs; dedupe.
+         refs="$(printf '%s\n' $IMAGES | sed '/^[[:space:]]*$/d;/^(none)$/d' | grep "^$SRC/" | sort -u || true)"
+         if [ -z "$refs" ]; then echo "no $SRC refs to mirror"; exit 0; fi
+
+         # crane copy one ref, with 3 retries + linear backoff. Prints OK/FAIL <dst>.
+         copy_one() {
+           s="$1"; d="$DST/${s#$SRC/}"; n=0
+           until crane copy "$s" "$d"; do
+             n=$((n+1))
+             if [ "$n" -ge 3 ]; then echo "FAIL $d"; return 1; fi
+             echo "retry $n: $s" >&2; sleep $((n*5))
+           done
+           echo "OK   $d"
+         }
+         export -f copy_one; export SRC DST
+
+         # Fan out the copies. `xargs` exit code is non-zero if any copy_one failed.
+         log="$(mktemp)"
+         printf '%s\n' $refs | xargs -r -P "$PAR" -I{} bash -c 'copy_one "$1"' _ {} | tee "$log"
+         xrc=${PIPESTATUS[0]}
+
+         {
+           echo "### Zot mirror ($SRC → $DST)"
+           echo '```'
+           cat "$log"
+           echo '```'
+         } >> "$GITHUB_STEP_SUMMARY" || true
+
+         if grep -q '^FAIL' "$log" || [ "${xrc:-0}" != 0 ]; then
+           echo "::warning title=Zot mirror::one or more copies failed"
+           [ "$GATE" = '1' ] && exit 1 || exit 0
+         fi
+         exit 0
