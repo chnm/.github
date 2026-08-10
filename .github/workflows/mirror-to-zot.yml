@@ -26,7 +26,7 @@ concurrency:
 jobs:
  mirror:
    name: mirror
-   runs-on: [self-hosted, linux]        # <-- RECONCILE with your actual runner label(s)
+   runs-on: [self-hosted, IncusOS]      # IncusOS discriminator: only the crane-equipped forge runners (brokkr/sindri)
    timeout-minutes: 30
    steps:
      - name: Login to source (GHCR)
