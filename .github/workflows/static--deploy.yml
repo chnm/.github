@@ -60,7 +60,12 @@ jobs:
   deploy-ansible-playbook:
     runs-on: ${{ fromJSON(inputs.runner_labels) }}
     needs: [setup]
-    if: ${{ always() && !cancelled() && needs.setup.result == 'success' }}
+    # Empty website_fqdn == this ref's tier has no configured target (see the
+    # validate-fqdn action); skip rather than deploy to nowhere.
+    if: >
+      always() && !cancelled() &&
+      needs.setup.result == 'success' &&
+      needs.setup.outputs.website_fqdn != ''
     steps:
       # Serialize the github context for the ansible playbook's Slack
       # notification step. Pure-bash wrap (no python3 dep — toJSON already
@@ -109,7 +114,12 @@ jobs:
   deploy-notify:
     name: Deployment Notification
     needs: deploy-ansible-playbook
-    if: ${{ always() && !cancelled() && (needs.deploy-ansible-playbook.result != 'success') }}
+    # 'skipped' == no deploy target for this ref, which is deliberate, not a
+    # failure — don't page #sysadmin for it.
+    if: >
+      always() && !cancelled() &&
+      (needs.deploy-ansible-playbook.result != 'success' &&
+       needs.deploy-ansible-playbook.result != 'skipped')
     runs-on: ubuntu-latest
     steps:
       - uses: rtCamp/action-slack-notify@v2.2.0
