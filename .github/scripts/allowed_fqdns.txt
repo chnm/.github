@@ -63,6 +63,7 @@ imaging.dev.chnm.gmu.edu
 iowmaterial.dev.chnm.gmu.edu
 islampers.dev.chnm.gmu.edu
 jdh.dev.chnm.gmu.edu
+lynhaven.dev.chnm.gmu.edu
 mallhistory.dev.chnm.gmu.edu
 occupyarchive.dev.chnm.gmu.edu
 plastercast.dev.chnm.gmu.edu
