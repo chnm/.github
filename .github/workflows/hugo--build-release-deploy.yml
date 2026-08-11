@@ -40,9 +40,13 @@ on:
       website-devl-fqdn:                  # fqdn of development website
         required: true
         type: string
-      website-prod-fqdn:                  # fqdn of production website
-        required: true
-        type: string
+      website-prod-fqdn:                  # fqdn of production website. OPTIONAL:
+        required: false                   # leave unset for a pre-launch site that
+        type: string                      # has no production home yet — pushes to
+        default: ''                       # main then build + release as usual but
+                                          # deploy NOTHING (see `setup` below), so
+                                          # the dev FQDN is fed only by non-main
+                                          # refs. Set it and prod routing resumes.
       runner_labels:                      # JSON array of labels for the
         required: false                   # self-hosted deploy job; default
         type: string                      # pins to the legacy XCP-ng runner
@@ -80,8 +84,15 @@ jobs:
           echo "ref: ${{ github.ref }}"
           echo "sha: ${{ github.sha }}"
   
+      # Skipped only when this ref would select the PRODUCTION tier and no
+      # production FQDN is configured — a pre-launch site has nowhere to deploy
+      # on main, so leave website_fqdn empty (a skipped step emits no outputs)
+      # and let the deploy job gate itself off, instead of hard-failing the run.
+      # Every non-empty FQDN still goes through the allowlist check unchanged,
+      # so a typo'd or non-allowlisted value fails exactly as before.
       - name: Validate website FQDN
         id: validate
+        if: github.ref != 'refs/heads/main' || inputs.website-prod-fqdn != ''
         uses: chnm/.github/.github/actions/validate-fqdn@main
         with:
           website-devl-fqdn: ${{ inputs.website-devl-fqdn }}
@@ -280,9 +291,12 @@ jobs:
   deploy-ansible-playbook:
     runs-on: ${{ fromJSON(inputs.runner_labels) }}
     needs: [setup, build-hugo]
+    # Empty website_fqdn == "this ref has no deploy target" (pre-launch site on
+    # main; see `setup`). Skip rather than run the playbook with an empty FQDN.
     if: >
       always() && !cancelled() &&
-      needs.build-hugo.result == 'success'
+      needs.build-hugo.result == 'success' &&
+      needs.setup.outputs.website_fqdn != ''
     steps:
       # Playbook invocation (context json + IncusOS/legacy paths) is shared with
       # hugo--deploy.yml via this composite action.
@@ -294,9 +308,14 @@ jobs:
   deploy-notify:
     name: Deployment Notification
     needs: [build-hugo, deploy-ansible-playbook]
+    # `skipped` is a deliberate no-deploy (pre-launch site on main), NOT a
+    # failure — without this the gate above would fire "Deployment Failed" into
+    # #sysadmin on every main push.
     if: >
       always() && !cancelled() &&
-      (needs.deploy-ansible-playbook.result != 'success' || needs.build-hugo.result != 'success')
+      (needs.build-hugo.result != 'success' ||
+       (needs.deploy-ansible-playbook.result != 'success' &&
+        needs.deploy-ansible-playbook.result != 'skipped'))
     runs-on: ubuntu-latest
     steps:
       - uses: rtCamp/action-slack-notify@v2.2.0
