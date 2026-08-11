@@ -67,9 +67,12 @@ jobs:
   deploy-ansible-playbook:
     runs-on: ${{ fromJSON(inputs.runner_labels) }}
     needs: [setup]
+    # Empty website_fqdn == this ref's tier has no configured target (see the
+    # validate-fqdn action); skip rather than deploy to nowhere.
     if: >
       always() && !cancelled() &&
-      needs.setup.result == 'success'
+      needs.setup.result == 'success' &&
+      needs.setup.outputs.website_fqdn != ''
     steps:
       # Playbook invocation (context json + IncusOS/legacy paths) is shared with
       # hugo--build-release-deploy.yml via this composite action.
@@ -81,9 +84,12 @@ jobs:
   deploy-notify:
     name: Deployment Notification
     needs: deploy-ansible-playbook
+    # 'skipped' == no deploy target for this ref, which is deliberate, not a
+    # failure — don't page #sysadmin for it.
     if: >
       always() && !cancelled() &&
-      (needs.deploy-ansible-playbook.result != 'success')
+      (needs.deploy-ansible-playbook.result != 'success' &&
+       needs.deploy-ansible-playbook.result != 'skipped')
     runs-on: ubuntu-latest
     steps:
       - uses: rtCamp/action-slack-notify@v2.2.0

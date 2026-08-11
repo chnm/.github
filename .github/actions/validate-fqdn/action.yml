@@ -15,15 +15,24 @@ name: Validate website FQDN
 description: >
   Resolve WEBSITE_FQDN to the prod or dev value based on the git ref and
   validate it against scripts/allowed_fqdns.txt. Fails the step (and thus the
-  job) when the resolved FQDN is empty or not on the allowlist.
+  job) when the resolved FQDN is not on the allowlist. A tier whose FQDN was
+  never configured has no deploy target for this ref: website_fqdn comes back
+  empty and has_target is false, so the caller skips its deploy job.
 
 inputs:
   website-devl-fqdn:
-    description: FQDN to deploy to on the development ref(s).
-    required: true
+    description: >
+      FQDN to deploy to on the development ref(s). Omit when the site has no
+      development target — non-prod refs then build/publish without deploying.
+    required: false
+    default: ''
   website-prod-fqdn:
-    description: FQDN to deploy to on the production ref.
-    required: true
+    description: >
+      FQDN to deploy to on the production ref. Omit for a pre-launch site with
+      no production target — the production ref then builds/publishes without
+      deploying, so only non-prod refs reach the dev FQDN.
+    required: false
+    default: ''
   prod-ref:
     description: Git ref that selects the production FQDN.
     required: false
@@ -33,15 +42,22 @@ inputs:
       Git ref that selects the development FQDN. Leave empty (default) to use
       the dev FQDN as the fallback for ANY non-prod ref. Set it to gate dev
       deploys to a single ref — any ref matching neither prod-ref nor devl-ref
-      then resolves to an empty FQDN and fails validation (e.g. jekyll, which
-      only deploys from refs/heads/preview and refs/heads/main).
+      then has no deploy target and is skipped (e.g. jekyll, which only deploys
+      from refs/heads/preview and refs/heads/main).
     required: false
     default: ''
 
 outputs:
   website_fqdn:
-    description: The selected, allowlist-validated website FQDN.
+    description: >
+      The selected, allowlist-validated website FQDN. Empty when this ref's
+      tier has no configured target — gate deploy jobs on it being non-empty.
     value: ${{ steps.validate.outputs.website_fqdn }}
+  has_target:
+    description: >
+      'true' when this ref resolves to a deployable FQDN, 'false' when its tier
+      has none configured. Same signal as a non-empty website_fqdn, named.
+    value: ${{ steps.validate.outputs.has_target }}
 
 runs:
   using: composite
@@ -70,6 +86,20 @@ runs:
           # dev is the default target for any non-prod ref.
           WEBSITE_FQDN="$DEVL_FQDN"
         fi
+
+        # An unconfigured tier is a deliberate "nothing to deploy from this
+        # ref", not an error: the site simply has no home for that tier yet
+        # (pre-launch → no prod FQDN) or by design (no dev sandbox). Report it
+        # and let the caller skip its deploy job. Anything NON-empty still goes
+        # through the allowlist below, so a typo'd or unlisted FQDN fails hard.
+        if [ -z "$WEBSITE_FQDN" ]; then
+          echo "::notice::No deploy target configured for ${GITHUB_REF} — skipping deploy (build/publish still runs)."
+          echo "website_fqdn=" >> "$GITHUB_OUTPUT"
+          echo "has_target=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
         export WEBSITE_FQDN
         "$GITHUB_ACTION_PATH/../../scripts/validate_inputs.sh"
         echo "website_fqdn=$WEBSITE_FQDN" >> "$GITHUB_OUTPUT"
+        echo "has_target=true" >> "$GITHUB_OUTPUT"

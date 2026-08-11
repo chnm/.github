@@ -37,16 +37,19 @@ on:
         default: ''                       # semvar lookup scopes to "${prefix}v*".
 
       # Deployment Input Vars
+      # A tier deploys iff its FQDN is set here. Omit website-prod-fqdn for a
+      # pre-launch site (main builds + releases, deploys nowhere, so only
+      # non-main refs feed the dev FQDN); omit website-devl-fqdn for a site with
+      # no dev sandbox. Set both for the usual dev/prod split. Resolution +
+      # skip semantics live in the validate-fqdn action.
       website-devl-fqdn:                  # fqdn of development website
-        required: true
+        required: false
         type: string
-      website-prod-fqdn:                  # fqdn of production website. OPTIONAL:
-        required: false                   # leave unset for a pre-launch site that
-        type: string                      # has no production home yet — pushes to
-        default: ''                       # main then build + release as usual but
-                                          # deploy NOTHING (see `setup` below), so
-                                          # the dev FQDN is fed only by non-main
-                                          # refs. Set it and prod routing resumes.
+        default: ''
+      website-prod-fqdn:                  # fqdn of production website
+        required: false
+        type: string
+        default: ''
       runner_labels:                      # JSON array of labels for the
         required: false                   # self-hosted deploy job; default
         type: string                      # pins to the legacy XCP-ng runner
@@ -84,15 +87,8 @@ jobs:
           echo "ref: ${{ github.ref }}"
           echo "sha: ${{ github.sha }}"
   
-      # Skipped only when this ref would select the PRODUCTION tier and no
-      # production FQDN is configured — a pre-launch site has nowhere to deploy
-      # on main, so leave website_fqdn empty (a skipped step emits no outputs)
-      # and let the deploy job gate itself off, instead of hard-failing the run.
-      # Every non-empty FQDN still goes through the allowlist check unchanged,
-      # so a typo'd or non-allowlisted value fails exactly as before.
       - name: Validate website FQDN
         id: validate
-        if: github.ref != 'refs/heads/main' || inputs.website-prod-fqdn != ''
         uses: chnm/.github/.github/actions/validate-fqdn@main
         with:
           website-devl-fqdn: ${{ inputs.website-devl-fqdn }}

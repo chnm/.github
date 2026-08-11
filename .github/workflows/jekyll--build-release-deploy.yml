@@ -312,9 +312,12 @@ jobs:
   deploy-ansible-playbook:
     runs-on: self-hosted
     needs: [setup, release-create]
+    # Empty website_fqdn == this ref's tier has no configured target (see the
+    # validate-fqdn action); skip rather than deploy to nowhere.
     if: >
       always() && !cancelled() &&
-      needs.release-create.result == 'success'
+      needs.release-create.result == 'success' &&
+      needs.setup.outputs.website_fqdn != ''
     steps:
       - env:
           GITHUB_CONTEXT: ${{ toJSON(github) }}
@@ -331,10 +334,17 @@ jobs:
 
   deploy-notify:
     name: Deployment Notification
-    needs: deploy-ansible-playbook
+    # release-create must be in `needs` for needs.release-create.result below to
+    # resolve — it was referenced without being a dependency, so it read as null
+    # ( != 'success' ) and this job fired on EVERY run, successes included.
+    needs: [release-create, deploy-ansible-playbook]
+    # 'skipped' == no deploy target for this ref, which is deliberate, not a
+    # failure — don't page #sysadmin for it.
     if: >
       always() && !cancelled() &&
-      (needs.deploy-ansible-playbook.result != 'success' || needs.release-create.result != 'success')
+      (needs.release-create.result != 'success' ||
+       (needs.deploy-ansible-playbook.result != 'success' &&
+        needs.deploy-ansible-playbook.result != 'skipped'))
     runs-on: ubuntu-latest
     steps:
       - uses: rtCamp/action-slack-notify@v2.2.0
