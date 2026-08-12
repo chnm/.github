@@ -17,6 +17,7 @@ hugo.chnm.gmu.edu
 historymatters.gmu.edu
 
 # === rrchnm.org (core + project subdomains) ===
+20.rrchnm.org
 rrchnm.org
 hugo.rrchnm.org
 static.rrchnm.org
@@ -131,6 +132,7 @@ dev.database.religiousecologies.org
 resoundingthearchives.org
 sustainabledh.org
 dev.teachinghistory.org
+thanksroy.org
 wardepartmentpapers.org
 worldhistorycommons.org
 hugo.wardepartmentpapers.org
