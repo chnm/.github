@@ -15,6 +15,18 @@ inputs:
   website-fqdn:
     description: Target FQDN to deploy to (already resolved to prod/devl).
     required: true
+  release-tag:
+    description: >
+      Exact release tag to deploy — pass the tag this run just built so the
+      deploy is exact rather than the playbook re-resolving "newest matching
+      prefix" (a second build landing mid-deploy could otherwise win). Reaches
+      the playbook as -e target_release_tag=<tag>. The playbook ignores it
+      unless it startswith the target FQDN's catalogued tag_prefix, so this
+      cannot deploy a devl artifact onto a prod FQDN; a catalogued rollback
+      pin also still outranks it. Omit for deploy-only callers with no build
+      of their own (hugo--deploy.yml) — they resolve from the catalog.
+    required: false
+    default: ''
   runner-labels:
     description: >
       JSON array of the deploy runner labels; used to pick the IncusOS vs the
@@ -45,9 +57,18 @@ runs:
       shell: bash
       env:
         GITHUB_CONTEXT_PATH: "${{ github.workspace }}/github-context.json"
+        RELEASE_TAG: ${{ inputs.release-tag }}
       run: |
+        # github-context.json carries ref_name, so the playbook's branch guard
+        # reads the deploying ref from there — and the presence of the whole
+        # github_context dict IS the "this run is CI-driven" flag. No separate
+        # branch var: one fact, one source, no way for the two to disagree. An
+        # operator run has no context, so `make deploy-hugo-sites` bypasses the
+        # guard. target_release_tag only when set — an empty -e would shadow the
+        # catalog's own release.tag pin with "", forcing a prefix re-resolve.
         run-ansible-playbook.sh playbooks/deploy-hugo-sites.yaml \
         -e "target_fqdn=${{ inputs.website-fqdn }}" \
+        ${RELEASE_TAG:+-e "target_release_tag=$RELEASE_TAG"} \
         -e "@/github-context.json"
 
     # Legacy XCP-ng path
