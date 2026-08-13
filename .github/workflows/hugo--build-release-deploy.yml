@@ -4,12 +4,19 @@ on:
   workflow_call:
     inputs:
       # Build Input Vars
-      container-registry:                 # container registry e.g. ghcr.io
-        required: true
-        type: string
-      container-image-name:               # name of container image i.e. github package
-        required: true
-        type: string
+      container-registry:                 # container registry for the local-dev
+        required: false                   # image push. Only ghcr is wired up
+        type: string                      # (the login below authenticates with
+        default: 'ghcr.io'                # GITHUB_TOKEN), so this is effectively
+                                          # fixed — kept as an input for callers
+                                          # that already pass it.
+      container-image-name:               # package name after <registry>/chnm/.
+        required: false                   # Defaults to the calling repo's name,
+        type: string                      # which suits one site per repo; set it
+        default: ''                       # for a monorepo publishing several.
+                                          # ('' -> github.event.repository.name,
+                                          # resolved in CONTAINER_TAG below —
+                                          # inputs can't reference contexts.)
       hugo-context-root:                  # root path for hugo build
         required: true
         type: string
@@ -67,7 +74,9 @@ on:
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  CONTAINER_TAG: "${{ inputs.container-registry }}/chnm/${{ inputs.container-image-name }}:latest"
+  # container-image-name defaults to the CALLING repo's name. An input default
+  # can't reference the github context, so the fallback lives here instead.
+  CONTAINER_TAG: "${{ inputs.container-registry }}/chnm/${{ inputs.container-image-name || github.event.repository.name }}:latest"
   RELEASE_NAME: ''
   RELEASE_TAG_NAME: ''
 
