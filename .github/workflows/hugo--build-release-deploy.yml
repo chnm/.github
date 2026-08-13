@@ -26,10 +26,14 @@ on:
       hugo-prod-url:                      # hugo production url
         required: true
         type: string
-      hugo-content-path:                  # path to built content in container; defaults to nginx html dir
-        required: false
-        type: string
-        default: /usr/share/nginx/html/
+      hugo-content-path:                  # where the built site lives INSIDE the
+        required: false                   # image. /srv matches every chnm Hugo
+        type: string                      # Dockerfile (caddy layout); the old
+        default: '/srv'                   # /usr/share/nginx/html/ default was
+                                          # nginx-era and no caller used it.
+                                          # Trailing slash optional — only its
+                                          # basename is used, to locate the
+                                          # extracted subdir before tarring.
 
       # Release Input Vars
       build-artifact-name:                # release asset basename; ".tar.gz" is
