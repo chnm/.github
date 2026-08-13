@@ -1,4 +1,4 @@
-name: Hugo Scheduled Posts Check Reusable Workflow
+name: Hugo Pre-flight Check Reusable Workflow
 
 # Decides whether a scheduled (cron) run has anything to publish.
 #
@@ -32,8 +32,8 @@ name: Hugo Scheduled Posts Check Reusable Workflow
 # Usage:
 #
 #   jobs:
-#     check:
-#       uses: chnm/.github/.github/workflows/hugo--scheduled-posts-check.yml@main
+#     pre-flight:
+#       uses: chnm/.github/.github/workflows/hugo--pre-flight-check.yml@main
 #       permissions:
 #         actions: read      # read the calling workflow's own run history
 #         contents: read
@@ -43,8 +43,8 @@ name: Hugo Scheduled Posts Check Reusable Workflow
 #           content/publications
 #
 #     build-release:
-#       needs: check
-#       if: needs.check.outputs.has_new == 'true'
+#       needs: pre-flight
+#       if: needs.pre-flight.outputs.should_build == 'true'
 #       uses: chnm/.github/.github/workflows/hugo--build-release.yml@main
 #       ...
 
@@ -87,19 +87,22 @@ on:
         default: '["ubuntu-latest"]'
 
     outputs:
-      has_new:
-        description: "'true' when the site should be rebuilt."
-        value: ${{ jobs.check.outputs.has_new }}
+      should_build:
+        description: >-
+          'true' when the caller should go on to build. Only ever 'false' on a
+          scheduled run that found nothing to publish — push and
+          workflow_dispatch always pass.
+        value: ${{ jobs.pre-flight.outputs.should_build }}
       since:
         description: "Start of the scanned window, ISO-8601 UTC (empty for non-schedule events)."
-        value: ${{ jobs.check.outputs.since }}
+        value: ${{ jobs.pre-flight.outputs.since }}
 
 jobs:
 
-  check:
+  pre-flight:
     runs-on: ${{ fromJSON(inputs.runner_labels) }}
     outputs:
-      has_new: ${{ steps.scan.outputs.has_new }}
+      should_build: ${{ steps.scan.outputs.should_build }}
       since: ${{ steps.scan.outputs.since }}
     steps:
       - uses: actions/checkout@v4
@@ -146,7 +149,7 @@ jobs:
           event = os.environ.get("EVENT_NAME", "")
           if event != "schedule":
               print(f"event '{event}' is not a scheduled run -- building unconditionally")
-              emit(has_new="true", since="")
+              emit(should_build="true", since="")
               sys.exit(0)
 
           now = datetime.now(timezone.utc)
@@ -313,10 +316,10 @@ jobs:
           for path, reason, when in triggers:
               print(f"{reason} reached: {path} ({when.isoformat()})")
 
-          has_new = "true" if triggers else "false"
-          print(f"scanned {scanned} file(s) with front matter across {len(roots) - len(missing)} root(s) -> has_new={has_new}")
+          should_build = "true" if triggers else "false"
+          print(f"scanned {scanned} file(s) with front matter across {len(roots) - len(missing)} root(s) -> should_build={should_build}")
 
-          summarize(f"### Scheduled posts check: `{has_new}`\n")
+          summarize(f"### Pre-flight check — should_build: `{should_build}`\n")
           summarize(f"Window: `{since.isoformat()}` -> `{now.isoformat()}`\n")
           if triggers:
               summarize("| File | Field | Date |")
@@ -326,5 +329,5 @@ jobs:
           else:
               summarize("No content crossed its `publishDate`/`expiryDate` in this window; build skipped.")
 
-          emit(has_new=has_new, since=since.isoformat())
+          emit(should_build=should_build, since=since.isoformat())
           PY
