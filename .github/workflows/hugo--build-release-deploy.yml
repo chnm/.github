@@ -324,6 +324,9 @@ jobs:
 
     outputs:
       release_name: ${{ env.RELEASE_NAME }}
+      # The TAG (not the display name) — handed to the deploy job so it pins the
+      # release this run produced instead of re-resolving newest-matching-prefix.
+      release_tag: ${{ env.RELEASE_TAG_NAME }}
 
   release-notify:
     name: Release Notification
@@ -368,6 +371,7 @@ jobs:
       - uses: chnm/.github/.github/actions/hugo-ansible-deploy@main
         with:
           website-fqdn:  ${{ needs.setup.outputs.website_fqdn }}
+          release-tag:   ${{ needs.build-hugo.outputs.release_tag }}
           runner-labels: ${{ inputs.runner_labels }}
 
   deploy-notify:
