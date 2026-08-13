@@ -25,12 +25,26 @@ on:
         default: /usr/share/nginx/html/
 
       # Release Input Vars
-      build-artifact-name:                # name of build artifact to transfer between jobs/workflows
-        required: true
-        type: string
+      build-artifact-name:                # release asset basename; ".tar.gz" is
+        required: false                   # appended. The default suits one site
+        type: string                      # per repo — set it explicitly if a
+        default: 'hugo-build'             # repo ever releases MORE than one,
+                                          # since the tag families are shared
+                                          # and would not tell them apart.
       release-tag-name-type:              # semvar | iso
         required: true
         type: string
+      tag-prefix:                         # prefix for tag/release name; the
+        required: false                   # default names the workflow, override
+        type: string                      # per artifact (e.g. "emm-website-")
+        default: 'hugo-build-'            # so a monorepo can release each
+                                          # module independently. The deploy
+                                          # playbooks match on this prefix.
+                                          # semvar lookup scopes to "${prefix}v*".
+      devl-releases-to-keep:              # how many "${prefix}devl-" releases
+        required: false                   # to retain; older ones are deleted
+        type: number                      # (tag included) after each devl build
+        default: 3
 
       # Deployment Input Vars
       website-devl-fqdn:                  # fqdn of development website
@@ -115,8 +129,14 @@ jobs:
           tags: "${{ env.CONTAINER_TAG }}"
           platforms: linux/amd64
 
+      # Two tiers, split on the prod ref alone: main is production, everything
+      # else is development. Gating this on `== preview` instead left any other
+      # ref matching neither tier, so the artifact fell through to the
+      # argument-less "Local Dev" image above (no --baseURL, no --environment,
+      # no --minify) while validate-fqdn still resolved a dev deploy target.
+      # Matches hugo--build-release-deploy.yml.
       - name: Build Docker Image (devl)
-        if: github.ref == 'refs/heads/preview'
+        if: github.ref != 'refs/heads/main'
         uses: docker/build-push-action@v4
         with:
           context: "${{ inputs.hugo-context-root }}"
@@ -163,11 +183,24 @@ jobs:
         name: Get build timestamp for tag
         run: echo "ts=$(TZ=America/New_York date +'%Y%m%d_%H%M%S')" >> $GITHUB_OUTPUT
 
+      # Two tag families, split on the prod ref:
+      #   main       -> hugo-build-main-20260812_143005
+      #   every else -> hugo-build-devl-20260812_143005
+      # Both tiers carry an explicit token so neither family is a prefix of the
+      # other — a deploy playbook can select on "${prefix}main-" or
+      # "${prefix}devl-" with a plain prefix match and can never pull the wrong
+      # tier. (A bare "${prefix}${timestamp}" for main would be matched by any
+      # "${prefix}" glob, devl releases included.)
+      # Collapsing ALL non-main refs to one "devl-" token rather than the branch
+      # name keeps devl tags predictable and gives the prune step below a single
+      # pattern to match — a per-branch slug would leave one unprunable series
+      # per feature branch.
       - if: inputs.release-tag-name-type == 'iso'
         name: Set RELEASE_NAME / RELEASE_TAG_NAME env (iso)
         run: |
-          echo "RELEASE_NAME=${{ steps.build_timestamp.outputs.ts }}" >> $GITHUB_ENV
-          echo "RELEASE_TAG_NAME=${{ steps.build_timestamp_for_tag.outputs.ts }}" >> $GITHUB_ENV
+          if [ "$GITHUB_REF" = "refs/heads/main" ]; then TIER="main-"; else TIER="devl-"; fi
+          echo "RELEASE_NAME=${{ inputs.tag-prefix }}${TIER}${{ steps.build_timestamp.outputs.ts }}" >> $GITHUB_ENV
+          echo "RELEASE_TAG_NAME=${{ inputs.tag-prefix }}${TIER}${{ steps.build_timestamp_for_tag.outputs.ts }}" >> $GITHUB_ENV
 
       - id: previoustag
         if: inputs.release-tag-name-type == 'semvar'
@@ -231,6 +264,36 @@ jobs:
           name: ${{ env.RELEASE_NAME }}
           body_path: ./RELEASE.md
           files: "./${{ inputs.build-artifact-name }}.tar.gz"
+
+      # A devl release is the delivery pipe for a non-main deploy (the playbook
+      # fetches the tarball from it), not a milestone record, so one accumulates
+      # per build. Keep the newest few, delete the rest along with their tags.
+      # Anchored on "${prefix}devl-", so main releases can never match. Only the
+      # iso path emits that token; semvar tags carry no tier marker.
+      # Housekeeping must not fail an otherwise good build -> continue-on-error.
+      - name: Prune old devl releases
+        if: github.ref != 'refs/heads/main' && inputs.release-tag-name-type == 'iso'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEVL_PREFIX: "${{ inputs.tag-prefix }}devl-"
+          KEEP: "${{ inputs.devl-releases-to-keep }}"
+        run: |
+          # $ENV keeps the prefix and count out of the jq program text, so a
+          # tag-prefix containing jq-significant characters cannot alter the filter.
+          mapfile -t STALE < <(
+            gh release list --limit 1000 --json tagName,createdAt --jq '
+              [ .[] | select(.tagName | startswith($ENV.DEVL_PREFIX)) ]
+              | sort_by(.createdAt) | reverse
+              | .[ ($ENV.KEEP | tonumber) : ]
+              | .[].tagName'
+          )
+          echo "keeping newest ${KEEP} of ${DEVL_PREFIX}* — ${#STALE[@]} to delete"
+          for tag in "${STALE[@]}"; do
+            [ -n "$tag" ] || continue
+            echo "deleting release + tag: ${tag}"
+            gh release delete "$tag" --cleanup-tag --yes
+          done
 
     outputs:
       release_name: ${{ env.RELEASE_NAME }}
