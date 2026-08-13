@@ -72,9 +72,12 @@ on:
         type: string
         default: ''
       runner_labels:                      # JSON array of labels for the
-        required: false                   # self-hosted deploy job; default
-        type: string                      # pins to the legacy XCP-ng runner
-        default: '["self-hosted","XCP-ng"]'
+        required: false                   # self-hosted deploy job. IncusOS is
+        type: string                      # the live platform AND selects the
+        default: '["self-hosted","IncusOS"]'   # deploy-hugo-sites.yaml path in
+                                          # the hugo-ansible-deploy action; the
+                                          # old XCP-ng default routed callers to
+                                          # the legacy deploy-ssg-website.yaml.
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
