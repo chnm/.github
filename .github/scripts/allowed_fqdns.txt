@@ -132,7 +132,9 @@ dev.database.religiousecologies.org
 resoundingthearchives.org
 sustainabledh.org
 dev.teachinghistory.org
+teachinghistory.org
 thanksroy.org
+virginiaslostat.org
 wardepartmentpapers.org
 worldhistorycommons.org
 hugo.wardepartmentpapers.org
