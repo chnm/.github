@@ -73,6 +73,7 @@ revolution.dev.chnm.gmu.edu
 thanksroy.dev.chnm.gmu.edu
 transatlaenc.dev.chnm.gmu.edu
 valostat.dev.chnm.gmu.edu
+pwd.dev.chnm.gmu.edu
 whc.dev.chnm.gmu.edu
 games.dev.chnm.gmu.edu
 1665plague.dev.chnm.gmu.edu
@@ -116,6 +117,7 @@ earlymodernviolence.org
 dev.earlymodernviolence.org
 forustheliving.org
 hearingtheamericas.org
+hurricanearchive.org
 journalofdigitalhumanities.org
 legalmodernism.org
 chambers.legalmodernism.org
