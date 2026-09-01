@@ -102,6 +102,7 @@ plastercast.gmu.edu
 # === Standalone project sites (prod + dev where applicable) ===
 911digitalarchive.org
 amboyna.org
+braceroarchive.org
 civilwargraffiti.org
 dev.civilwargraffiti.org
 connectingthreads.co.uk
