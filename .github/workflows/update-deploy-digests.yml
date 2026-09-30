@@ -39,6 +39,11 @@ on:
         required: false
         type: string
         default: main
+      guard-newest:
+        description: Skip the pin if the branch has a newer non-pin commit than this build.
+        required: false
+        type: boolean
+        default: false
       git-user-name:
         required: false
         type: string
@@ -57,6 +62,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref }}          # persist-credentials (default) -> GITHUB_TOKEN push
+          fetch-depth: ${{ inputs.guard-newest && '0' || '1' }}
 
       - name: Install kustomize (pinned)
         run: |
@@ -70,10 +76,13 @@ jobs:
           DIGESTS: ${{ inputs.digests }}
           OVERLAY: ${{ inputs.overlay }}
           REF: ${{ inputs.ref }}
+          GUARD_NEWEST: ${{ inputs.guard-newest }}
+          GIT_USER_NAME: ${{ inputs.git-user-name }}
+          GIT_USER_EMAIL: ${{ inputs.git-user-email }}
         run: |
           set -euo pipefail
-          git config user.name  "${{ inputs.git-user-name }}"
-          git config user.email "${{ inputs.git-user-email }}"
+          git config user.name "$GIT_USER_NAME"
+          git config user.email "$GIT_USER_EMAIL"
           for attempt in 1 2 3 4 5; do
             # Fresh tip every attempt: concurrent pin jobs race on $REF, and a
             # rejected push means it moved — REDO the edit there instead of
@@ -81,6 +90,19 @@ jobs:
             # wedge (rebase-in-progress; the 2026-07-22 dropped pins);
             # re-editing is conflict-free by construction.
             git fetch origin "$REF"
+            if [ "$GUARD_NEWEST" = true ]; then
+              if ! git merge-base --is-ancestor "$GITHUB_SHA" "origin/$REF"; then
+                echo "build revision is no longer on $REF; not pinning"
+                exit 0
+              fi
+              # Other digest pins may advance the branch without changing source.
+              newer=$(git log --format=%s "${GITHUB_SHA}..origin/$REF" |
+                awk '!/^deploy: pin .+ images to [0-9a-f]{8}$/')
+              if [ -n "$newer" ]; then
+                echo "$REF has newer source commits; leaving the pin to their builds"
+                exit 0
+              fi
+            fi
             git reset --hard "origin/$REF"
             while IFS= read -r ref; do
               [ -z "$ref" ] && continue
@@ -91,11 +113,12 @@ jobs:
                 (cd "${OVERLAY}" && kustomize edit set image "${ref}")
               fi
             done <<< "${DIGESTS}"
-            if git diff --quiet; then
+            git add -- "${OVERLAY}/kustomization.yaml"
+            if git diff --cached --quiet; then
               echo "nothing to pin (already current, or no matching entries) — done"
               exit 0
             fi
-            git commit -am "deploy: pin ${OVERLAY} images to ${GITHUB_SHA:0:8}" \
+            git commit -m "deploy: pin ${OVERLAY} images to ${GITHUB_SHA:0:8}" \
                        -m "Digest bump from build ${GITHUB_SHA} (${GITHUB_REPOSITORY}). Argo reconciles the change."
             if git push origin "HEAD:$REF"; then
               echo "pinned on attempt ${attempt}"
