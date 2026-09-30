@@ -1,0 +1,160 @@
+name: Django image and k0s deployment pin
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        description: Hosted Zot image path, such as rrchnm/apiary-django.
+        required: true
+        type: string
+      context:
+        description: Repository-relative Docker build context.
+        type: string
+        default: .
+      test-target:
+        description: Dockerfile stage that runs hermetic checks without a database.
+        type: string
+        default: test
+      overlay:
+        description: Repository-relative Kustomize overlay watched by Argo CD.
+        type: string
+        default: k8s
+      ref:
+        description: Trusted branch that publishes images and receives digest pins.
+        type: string
+        default: main
+    secrets:
+      ZOT_TOKEN:
+        description: Zot ci push credential; required only for trusted branch builds.
+        required: false
+    outputs:
+      digest:
+        description: Published image digest; empty for pull requests.
+        value: ${{ jobs.publish.outputs.digest }}
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          lfs: true
+          persist-credentials: false
+      - name: Validate deployment inputs
+        env:
+          IMAGE: ${{ inputs.image }}
+          CONTEXT: ${{ inputs.context }}
+          OVERLAY: ${{ inputs.overlay }}
+          REF: ${{ inputs.ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$IMAGE" =~ ^(rrchnm|rrchnm-systems)/[a-z0-9]+([._-][a-z0-9]+)*(/[a-z0-9]+([._-][a-z0-9]+)*)*$ ]]; then
+            echo "::error::image must be an untagged path in a hosted Zot namespace"
+            exit 1
+          fi
+          git check-ref-format --branch "$REF" >/dev/null
+          if [[ "$CONTEXT" = /* || "/$CONTEXT/" = */../* || ! -f "$CONTEXT/Dockerfile" ]]; then
+            echo "::error::context must contain a repository-relative Dockerfile"
+            exit 1
+          fi
+          if [[ "$OVERLAY" = /* || "/$OVERLAY/" = */../* || ! -f "$OVERLAY/kustomization.yaml" ]]; then
+            echo "::error::overlay must contain a repository-relative kustomization.yaml"
+            exit 1
+          fi
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - name: Build and execute the test stage
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: ${{ inputs.context }}
+          target: ${{ inputs.test-target }}
+          push: false
+          pull: true
+          provenance: false
+      - name: Build the runtime image without publishing
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: ${{ inputs.context }}
+          push: false
+          pull: true
+          provenance: false
+
+  publish:
+    needs: test
+    # Never schedule PR code, including pull_request_target, on internal runners.
+    if: >-
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      github.ref == format('refs/heads/{0}', inputs.ref)
+    runs-on: [self-hosted, IncusOS]
+    timeout-minutes: 45
+    concurrency:
+      group: django-k0s-publish-${{ github.repository }}-${{ inputs.image }}-${{ inputs.ref }}
+      cancel-in-progress: false
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          lfs: true
+          persist-credentials: false
+      - name: Prepare isolated registry authentication
+        id: registry
+        env:
+          ZOT_TOKEN: ${{ secrets.ZOT_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${BUILDX_BUILDER:-}" || { echo "::error::runner-scoped BUILDX_BUILDER is missing"; exit 1; }
+          test -n "$ZOT_TOKEN" || { echo "::error::ZOT_TOKEN is required to publish"; exit 1; }
+          directory=$(mktemp -d "$RUNNER_TEMP/zot-auth.XXXXXX")
+          echo "directory=$directory" >> "$GITHUB_OUTPUT"
+          # Keep the runner's persistent builder state separate from credentials.
+          {
+            echo "DOCKER_CONFIG=$directory"
+            echo "BUILDX_CONFIG=$HOME/.docker/buildx"
+            echo "BUILDX_BUILDER=$BUILDX_BUILDER"
+          } >> "$GITHUB_ENV"
+          export DOCKER_CONFIG="$directory"
+          printf '%s' "$ZOT_TOKEN" | docker login oci.rrchnm.internal --username ci --password-stdin
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+        with:
+          name: ${{ env.BUILDX_BUILDER }}
+          cleanup: false
+          cache-binary: false
+      - name: Publish the runtime image
+        id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: ${{ inputs.context }}
+          push: true
+          pull: true
+          platforms: linux/amd64
+          tags: oci.rrchnm.internal/${{ inputs.image }}:${{ github.sha }}
+          labels: org.opencontainers.image.revision=${{ github.sha }}
+          build-args: SOURCE_SHA=${{ github.sha }}
+          provenance: false
+      - name: Remove registry credentials
+        if: ${{ always() }}
+        env:
+          AUTH_DIRECTORY: ${{ steps.registry.outputs.directory }}
+        shell: bash
+        run: |
+          if [ -n "$AUTH_DIRECTORY" ]; then
+            rm -rf -- "$AUTH_DIRECTORY"
+          fi
+
+  pin:
+    needs: publish
+    if: ${{ needs.publish.result == 'success' }}
+    permissions:
+      contents: write
+    uses: ./.github/workflows/update-deploy-digests.yml
+    with:
+      digests: oci.rrchnm.internal/${{ inputs.image }}@${{ needs.publish.outputs.digest }}
+      overlay: ${{ inputs.overlay }}
+      ref: ${{ inputs.ref }}
+      guard-newest: true
