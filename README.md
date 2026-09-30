@@ -35,7 +35,8 @@ Inputs: `image` (required hosted Zot path), `context` (`.`), `test-target`
 registries, deployment secrets, or a live database. The overlay must already
 declare the full `oci.rrchnm.internal/<image>` name with a digest.
 
-Grant the caller access to the IncusOS runner group and the Zot `ci` credential.
+Grant the caller access to the IncusOS runner group and the Zot `ci-github` credential
+(the `ZOT_TOKEN` org secret, minted by infra `scripts/rotate-zot-ci-token.sh --user ci-github`).
 Only reviewed code belongs on the publishing branch. Digest pins use the caller's
 `GITHUB_TOKEN`; branch rules must allow those commits. Otherwise require a
 promotion-PR flow before adopting this workflow. No registry credentials remain
