@@ -186,7 +186,10 @@ jobs:
                   url = (
                       f"{os.environ['GITHUB_API_URL']}/repos/{os.environ['GITHUB_REPOSITORY']}"
                       f"/actions/workflows/{workflow_file}/runs"
-                      "?event=schedule&status=success&per_page=1"
+                      # No `status=success`: that filter returns an incomplete,
+                      # unordered subset (it handed back runs 10+ days stale
+                      # and re-published the same post daily). Filter here.
+                      "?event=schedule&per_page=30"
                   )
                   req = urllib.request.Request(url, headers={
                       "Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}",
@@ -195,10 +198,14 @@ jobs:
                   })
                   with urllib.request.urlopen(req, timeout=10) as resp:
                       runs = json.load(resp).get("workflow_runs", [])
-                  if runs:
-                      since = datetime.fromisoformat(
-                          runs[0]["run_started_at"].replace("Z", "+00:00")
-                      ).astimezone(timezone.utc)
+                  current = os.environ.get("GITHUB_RUN_ID", "")
+                  started = [
+                      datetime.fromisoformat(run["run_started_at"].replace("Z", "+00:00")).astimezone(timezone.utc)
+                      for run in runs
+                      if run.get("conclusion") == "success" and str(run.get("id")) != current
+                  ]
+                  if started:
+                      since = max(started)
                       print(f"since = last successful scheduled run of {workflow_file}: {since.isoformat()}")
                   else:
                       print(f"no prior successful scheduled run of {workflow_file}; {fallback_days:g}-day fallback: {since.isoformat()}")
