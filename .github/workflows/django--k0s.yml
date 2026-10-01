@@ -142,9 +142,11 @@ jobs:
         env:
           AUTH_DIRECTORY: ${{ steps.registry.outputs.directory }}
         shell: bash
+        # Remove only the credential: the buildx post-job summary still runs the
+        # plugin installed here, and the runner deletes RUNNER_TEMP after the job.
         run: |
           if [ -n "$AUTH_DIRECTORY" ]; then
-            rm -rf -- "$AUTH_DIRECTORY"
+            rm -f -- "$AUTH_DIRECTORY/config.json"
           fi
 
   pin:
