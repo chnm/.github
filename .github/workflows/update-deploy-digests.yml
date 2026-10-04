@@ -52,16 +52,37 @@ on:
         required: false
         type: string
         default: syschnm@gmu.edu
+    secrets:
+      PIN_APP_PRIVATE_KEY:
+        description: >-
+          Private key of the org's pin GitHub App (client ID in the org variable
+          PIN_APP_CLIENT_ID). The App is a bypass actor on protected default
+          branches; GITHUB_TOKEN cannot be one in a repository ruleset.
+        required: false
 
 jobs:
   pin:
     runs-on: ubuntu-latest
     permissions:
       contents: write        # commit + push (the CALLER must also grant contents: write)
+    env:
+      # Secrets can't appear in `if:`; callers that don't pass the key keep GITHUB_TOKEN.
+      PIN_APP: ${{ secrets.PIN_APP_PRIVATE_KEY != '' && vars.PIN_APP_CLIENT_ID != '' }}
     steps:
+      # The pin App's token when the caller passes its key; otherwise GITHUB_TOKEN pushes.
+      - name: Mint the pin App token
+        id: app
+        if: ${{ env.PIN_APP == 'true' }}
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.PIN_APP_CLIENT_ID }}
+          private-key: ${{ secrets.PIN_APP_PRIVATE_KEY }}
+          permission-contents: write
+
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref }}          # persist-credentials (default) -> GITHUB_TOKEN push
+          ref: ${{ inputs.ref }}          # persist-credentials (default) -> this token pushes
+          token: ${{ steps.app.outputs.token || github.token }}
           fetch-depth: ${{ inputs.guard-newest && '0' || '1' }}
 
       - name: Install kustomize (pinned)
