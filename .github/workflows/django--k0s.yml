@@ -27,6 +27,9 @@ on:
       ZOT_TOKEN:
         description: Zot ci-github push credential; required only for trusted branch builds.
         required: false
+      PIN_APP_PRIVATE_KEY:
+        description: Org pin GitHub App key, so the digest pin can push to a ruleset-protected ref.
+        required: false
     outputs:
       digest:
         description: Published image digest; empty for pull requests.
@@ -160,3 +163,5 @@ jobs:
       overlay: ${{ inputs.overlay }}
       ref: ${{ inputs.ref }}
       guard-newest: true
+    secrets:
+      PIN_APP_PRIVATE_KEY: ${{ secrets.PIN_APP_PRIVATE_KEY }}
