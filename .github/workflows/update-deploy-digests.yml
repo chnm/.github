@@ -85,10 +85,19 @@ jobs:
           token: ${{ steps.app.outputs.token || github.token }}
           fetch-depth: ${{ inputs.guard-newest && '0' || '1' }}
 
+      # The release tarball itself, checked against its published SHA-256.
+      # Not install_kustomize.sh: it looks the release up through the GitHub
+      # API unauthenticated, and the shared runner IPs hit the rate limit.
       - name: Install kustomize (pinned)
+        env:
+          KUSTOMIZE_VERSION: 5.4.3
+          KUSTOMIZE_SHA256: 3669470b454d865c8184d6bce78df05e977c9aea31c30df3c669317d43bcc7a7
         run: |
           mkdir -p "$HOME/.local/bin"
-          curl -fsSL https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash -s 5.4.3 "$HOME/.local/bin"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/kustomize.tar.gz" \
+            "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
+          echo "${KUSTOMIZE_SHA256}  $RUNNER_TEMP/kustomize.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/kustomize.tar.gz" -C "$HOME/.local/bin" kustomize
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           "$HOME/.local/bin/kustomize" version
 
