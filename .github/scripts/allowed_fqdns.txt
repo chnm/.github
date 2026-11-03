@@ -58,7 +58,7 @@ bracero.dev.chnm.gmu.edu
 eec.dev.chnm.gmu.edu
 emm.dev.chnm.gmu.edu
 futl.dev.chnm.gmu.edu
-hearamerica.dev.chnm.gmu.edu
+hta.dev.chnm.gmu.edu
 hurricane.dev.chnm.gmu.edu
 imaging.dev.chnm.gmu.edu
 iowmaterial.dev.chnm.gmu.edu
