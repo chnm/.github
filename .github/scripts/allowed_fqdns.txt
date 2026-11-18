@@ -18,6 +18,7 @@ historymatters.gmu.edu
 
 # === rrchnm.org (core + project subdomains) ===
 20.rrchnm.org
+ai.rrchnm.org
 rrchnm.org
 hugo.rrchnm.org
 static.rrchnm.org
@@ -54,6 +55,7 @@ devl.rrchnm.site
 # === *.dev.chnm.gmu.edu (dev sandboxes) ===
 20th.dev.chnm.gmu.edu
 911.dev.chnm.gmu.edu
+ai.dev.chnm.gmu.edu
 bracero.dev.chnm.gmu.edu
 eec.dev.chnm.gmu.edu
 emm.dev.chnm.gmu.edu
